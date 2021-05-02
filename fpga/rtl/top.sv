@@ -1,0 +1,548 @@
+import common::*;
+
+module zx_ula(
+	input clk_in,
+
+	output reg n_rstcpu,
+	output reg clkcpu,
+
+	inout [18:0] va,
+	inout [7:0] vd,
+	input [15:13] a,
+
+	output n_vrd,
+	output n_vwr,
+
+	input n_rd,
+	input n_wr,
+	input n_mreq,
+	input n_iorq,
+	input n_m1,
+	input n_rfsh,
+	output reg n_int,
+	output n_nmi,
+
+	output reg [5:0] vdac,
+	output reg [2:0] chroma,
+	output reg csync,
+
+	output snd_l,
+	output snd_r,
+
+	inout reg ps2_clk,
+	inout reg ps2_data,
+
+	input sd_cd,
+	input sd_miso_tape_in,
+	output sd_mosi,
+	output reg sd_sck,
+	output reg sd_cs
+);
+
+/* CLOCK */
+wire clk28 = clk_in;
+wire clk40;
+wire clk20;
+wire rst_n;
+pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
+
+
+/* REGISTER DEFINITIONS */
+timings_t timings;
+turbo_t turbo;
+wire clkwait;
+reg magic_beeper;
+wire pause = 0;
+
+reg n_iorq_delayed;
+always @(posedge clk28)
+	n_iorq_delayed <= n_iorq;
+cpu_bus bus();
+always @* begin
+	bus.a = {a[15:13], va[12:0]};
+	bus.d = vd;
+	bus.iorq = ~n_iorq;
+	bus.mreq = ~n_mreq;
+	bus.m1 = ~n_m1;
+	bus.rfsh = ~n_rfsh;
+	bus.rd = ~n_rd;
+	bus.wr = ~n_wr;
+	bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0;
+end
+
+
+/* SCREEN CONTROLLER */
+reg [2:0] border;
+reg up_en;
+reg [1:0] r, g, b;
+reg hsync;
+wire blink;
+wire [2:0] screen_border = {border[2] ^ ~sd_cd, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
+wire screen_read, screen_load, screen_read_up;
+wire [14:0] screen_addr;
+wire [5:0] screen_up_addr;
+wire [7:0] attr_next;
+wire [8:0] vc, hc;
+wire clk14, clk7, clk35, ck14, ck7, ck35;
+screen screen0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+
+	.bus(bus),
+	.screen_addr(screen_addr),
+	.up_addr(screen_up_addr),
+
+	.clkwait(clkwait),
+	.timings(timings),
+	.border(screen_border),
+	.up_en(up_en),
+
+	.r(r),
+	.g(g),
+	.b(b),
+	.csync(csync),
+	.hsync(hsync),
+
+	.blink(blink),
+	.read(screen_read),
+	.read_up(screen_read_up),
+	.load(screen_load),
+	.attr_next(attr_next),
+
+	.vc_out(vc),
+	.hc_out(hc),
+	.clk14(clk14),
+	.clk7(clk7),
+	.clk35(clk35),
+	.ck14(ck14),
+	.ck7(ck7),
+	.ck35(ck35)
+);
+
+always @*
+	vdac <= {r, g, b};
+
+reg [2:0] chroma0;
+chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
+	.cg_clock(clk40),
+	.cg_rgb({g[1],r[1],b[1]}),
+	.cg_hsync(hsync),
+	.cg_enable(1'b1),
+	.cg_pnsel(1'b0),
+	.cg_out(chroma0)
+);
+assign chroma[0] = chroma0[1]? chroma0[0] : 1'bz;
+assign chroma[1] = chroma0[2]? chroma0[0] : 1'bz;
+assign chroma[2] = 1'bz;
+
+
+/* CPU CONTROLLER */
+wire div_wait;
+wire [7:0] cpucontrol_dout;
+wire cpucontrol_dout_active;
+logic n_int_next;
+wire snow, clkcpu_ck;
+wire init_done;
+cpucontrol cpucontrol0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+	.clk14(clk14),
+	.clk7(clk7),
+	.clk35(clk35),
+
+	.bus(bus),
+
+	.d_out(cpucontrol_dout),
+	.d_out_active(cpucontrol_dout_active),
+
+	.vc(vc),
+	.hc(hc),
+	.rampage128(rampage128),
+	.screen_load(screen_load),
+	.turbo(turbo),
+	.timings(timings),
+	.pause(pause),
+	.ext_wait_cycle(div_wait || up_en),
+	.init_done_in(init_done),
+
+	.n_rstcpu(n_rstcpu),
+	.clkcpu(clkcpu),
+	.clkcpu_ck(clkcpu_ck),
+	.clkwait(clkwait),
+	.n_int(n_int),
+	.n_int_next(n_int_next),
+	.snow(snow)
+);
+
+
+/* MAGIC */
+reg magic_mode, magic_map;
+wire magic_active_next;
+reg n_nmi0;
+reg extlock, joy_sinclair, rom_plus3, rom_alt48, ay_abc, ay_mono;
+magic magic0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+
+	.bus(bus),
+	.n_int(n_int),
+	.n_int_next(n_int_next),
+	.n_nmi(n_nmi),
+
+	.magic_button(0),
+
+	.magic_mode(magic_mode),
+	.magic_map(magic_map),
+	.magic_active_next(magic_active_next),
+
+	.extlock(extlock),
+	.magic_beeper(magic_beeper),
+	.timings(timings),
+	.turbo(turbo),
+	.joy_sinclair(joy_sinclair),
+	.rom_plus3(rom_plus3),
+	.rom_alt48(rom_alt48),
+	.ay_abc(ay_abc),
+	.ay_mono(ay_mono)
+);
+
+
+/* PORTS */
+wire [7:0] ports_dout;
+wire ports_dout_active;
+reg beeper, tape_out;
+reg screenpage;
+reg rompage128;
+reg [2:0] rampage128;
+reg [2:0] rampage_ext;
+reg [2:0] port_1ffd;
+reg port_dffd_d3;
+reg port_dffd_d4;
+ports ports0 (
+	.rst_n(rst_n),
+	.clk28(clk28),
+
+	.bus(bus),
+	.d_out(ports_dout),
+	.d_out_active(ports_dout_active),
+
+	.en_128k(1),
+	.en_plus3(!extlock),
+	.en_profi(!extlock),
+
+	.clkcpu_ck(clkcpu_ck),
+	.timings(timings),
+	.screen_load(screen_load),
+	.attr_next(attr_next),
+	.kd(5'b11111),
+	.kempston_data(8'b11111111),
+	.joy_sinclair(joy_sinclair),
+	.magic_active_next(magic_active_next),
+	.sd_miso_tape_in(sd_miso_tape_in),
+
+	.tape_out(tape_out),
+	.beeper(beeper),
+	.border(border),
+	.screen_page(screenpage),
+	.rompage128(rompage128),
+	.rampage128(rampage128),
+	.rampage_ext(rampage_ext),
+	.port_1ffd(port_1ffd),
+	.port_dffd_d3(port_dffd_d3),
+	.port_dffd_d4(port_dffd_d4)
+);
+
+
+/* AY */
+reg ay_clk;
+reg ay_bdir;
+reg ay_bc1;
+reg ay_sel;
+wire ay_rd0 = ay_bc1 & ~ay_bdir & ~ay_sel;
+wire ay_rd1 = ay_bc1 & ~ay_bdir &  ay_sel;
+wire port_bffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[7:0] == 8'hFD;
+wire port_fffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[7:0] == 8'hFD;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n) begin
+		ay_clk <= 0;
+		ay_bc1 <= 0;
+		ay_bdir <= 0;
+	end
+	else begin
+		if (ck35)
+			ay_clk = pause | ~ay_clk;
+		ay_bc1  <= ay_sel && port_fffd;
+		ay_bdir <= ay_sel && port_bffd && bus.wr;
+		if (bus.ioreq && port_fffd && bus.wr && bus.d[7:3] == 5'b11111)
+			ay_sel <= ~bus.d[0];
+	end
+end
+
+wire [7:0] ay_dout0, ay_dout1;
+wire [7:0] ay_a0, ay_b0, ay_c0, ay_a1, ay_b1, ay_c1;
+YM2149 ym2149_0(
+	.CLK(clk28),
+	.ENA(1'b0),
+	.RESET_H(~rst_n),
+	.I_SEL_L(1'b1),
+	.I_DA(bus.d),
+	.O_DA(ay_dout0),
+	.busctrl_addr(ay_bc1),
+	.busctrl_we(ay_bdir & ~ay_sel),
+	.ctrl_aymode(1'b1),
+	.port_a_i(8'hff),
+	.port_b_i(8'hff),
+	.O_AUDIO_A(ay_a0),
+	.O_AUDIO_B(ay_b0),
+	.O_AUDIO_C(ay_c0)
+	);
+YM2149 ym2149_1(
+	.CLK(clk28),
+	.ENA(1'b0),
+	.RESET_H(~rst_n),
+	.I_SEL_L(1'b1),
+	.I_DA(bus.d),
+	.O_DA(ay_dout1),
+	.busctrl_addr(ay_bc1),
+	.busctrl_we(ay_bdir & ay_sel),
+	.ctrl_aymode(1'b1),
+	.port_a_i(8'hff),
+	.port_b_i(8'hff),
+	.O_AUDIO_A(ay_a1),
+	.O_AUDIO_B(ay_b1),
+	.O_AUDIO_C(ay_c1)
+	);
+
+/* COVOX & SOUNDRIVE */
+reg [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
+soundrive soundrive0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+	.en_covox(!extlock),
+	.en_soundrive(!extlock),
+
+	.bus(bus),
+
+	.ch_l0(soundrive_l0),
+	.ch_l1(soundrive_l1),
+	.ch_r0(soundrive_r0),
+	.ch_r1(soundrive_r1)
+);
+
+
+/* SOUND MIXER */
+mixer mixer0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+
+	.beeper(beeper),
+	.tape_out(tape_out),
+	.tape_in(sd_miso_tape_in),
+	.ay_a0(ay_a0),
+	.ay_b0(ay_b0),
+	.ay_c0(ay_c0),
+	.ay_a1(ay_a1),
+	.ay_b1(ay_b1),
+	.ay_c1(ay_c1),
+	.sd_l0(soundrive_l0),
+	.sd_l1(soundrive_l1),
+	.sd_r0(soundrive_r0),
+	.sd_r1(soundrive_r1),
+
+	.dac_l(snd_l),
+	.dac_r(snd_r)
+);
+
+
+/* DIVMMC */
+wire div_map, div_ram, div_ramwr_mask, div_dout_active;
+wire [7:0] div_dout;
+reg [3:0] div_page;
+reg sd_mosi0;
+divmmc divmmc0(
+	.rst_n(rst_n),
+	.clk28(clk28),
+	.ck14(ck14),
+	.ck7(ck7),
+	.en(!extlock),
+
+	.bus(bus),
+	.d_out(div_dout),
+	.d_out_active(div_dout_active),
+
+	.sd_cd(sd_cd | 1),
+	.sd_miso(sd_miso_tape_in),
+	.sd_mosi(sd_mosi0),
+	.sd_sck(sd_sck),
+	.sd_cs(sd_cs),
+	
+	.port_dffd_d4(port_dffd_d4),
+	.port_1ffd_d0(port_1ffd[0]),
+	.magic_mode(magic_mode),
+	.magic_map(magic_map),
+
+	.div_page(div_page),
+	.div_map(div_map),
+	.div_ram(div_ram),
+	.div_ramwr_mask(div_ramwr_mask),
+	.div_wait(div_wait)
+);
+assign sd_mosi = (sd_cs == 1'b0)? sd_mosi0 : tape_out;
+
+
+/* ULAPLUS */
+wire port_bf3b_cs = !extlock && bus.ioreq && bus.a == 16'hbf3b;
+wire port_ff3b_cs = !extlock && bus.ioreq && bus.a == 16'hff3b;
+reg port_ff3b_rd;
+wire [7:0] port_ff3b_data = {7'b0000000, up_en};
+reg [7:0] up_addr_reg;
+reg up_write_req;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n) begin
+		port_ff3b_rd <= 1'b0;
+		up_en <= 1'b0;
+		up_write_req <= 1'b0;
+		up_addr_reg <= 1'b0;
+	end
+	else begin
+		port_ff3b_rd <= port_ff3b_cs && n_rd == 1'b0;
+		if (n_wr == 1'b0) begin
+			if (port_bf3b_cs)
+				up_addr_reg <= bus.d;
+			
+			if (port_ff3b_cs) begin
+				if (up_addr_reg == 8'b01000000)
+					up_en <= bus.d[0];
+				else if (up_addr_reg[7:6] == 2'b00)
+					up_write_req <= 1'b1;
+			end
+		end
+		else begin
+			up_write_req <= 0;
+		end
+	end
+end
+
+
+/* MEMORY INITIALIZER */
+wire rom2ram_clk = clk35;
+wire [14:0] rom2ram_ram_address, rom2ram_rom_address;
+wire [7:0] rom2ram_datain, rom2ram_dataout;
+wire rom2ram_rom_rden;
+wire rom2ram_rom_data_ready;
+wire rom2ram_ram_wren;
+wire rom2ram_active;
+assign init_done = !rom2ram_active;
+reg [1:0] rom2ram_init;
+always @(posedge rom2ram_clk or negedge rst_n) begin
+	if (!rst_n)
+		rom2ram_init <= 0;
+	else if (rom2ram_init != 3)
+		rom2ram_init <= rom2ram_init + 1'b1;	
+end
+rom2ram rom2ram0(
+	.clock(rom2ram_clk),
+	.init(rom2ram_init == 2),
+	.datain(rom2ram_datain),
+	.rom_data_ready(rom2ram_rom_data_ready),
+	
+	.init_busy(rom2ram_active),
+	.rom_address(rom2ram_rom_address),
+	.rom_rden(rom2ram_rom_rden),
+	.ram_wren(rom2ram_ram_wren),
+	.ram_address(rom2ram_ram_address),
+	.dataout(rom2ram_dataout)
+);
+
+localparam ROM_OFFSET = 24'h00013256;
+wire [23:0] asmi_addr = ROM_OFFSET + rom2ram_rom_address;
+asmi asmi0(
+	.clkin(rom2ram_clk),
+	.read(rom2ram_rom_rden),
+	.rden(rom2ram_active),
+	.addr(asmi_addr),
+	.reset(!rst_n),
+		
+	.dataout(rom2ram_datain),
+	.busy(),
+	.data_valid(rom2ram_rom_data_ready)
+);
+
+
+/* MEMORY CONTROLLER */
+reg romreq, ramreq, ramreq_wr;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n) begin
+		romreq = 1'b0;
+		ramreq = 1'b0;
+		ramreq_wr = 1'b0;
+	end
+	else begin
+		romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
+			(magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd_d4 && !port_1ffd[0]));
+		ramreq = (bus.mreq && !bus.rfsh && !romreq) || up_write_req;
+		ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
+	end
+end
+
+assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_read) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
+assign n_vwr = ((ramreq_wr && bus.wr && !screen_read) || rom2ram_ram_wren)? 1'b0 : 1'b1;
+
+/* VA[18:13] map
+ * 00xxxx 128Kb of roms
+ * 00111x 16Kb of magic ram and ulaplus
+ * 01xxxx 128Kb of divmmc memory
+ * 10xxxx 128Kb of extended ram (via port dffd)
+ * 11xxxx 128Kb of main ram
+ */ 
+
+reg [18:13] ram_a;
+always @(posedge clk28) begin
+	ram_a <=
+		magic_map & bus.a[15] & bus.a[14]? {2'b00, 3'b111, bus.a[13]} :
+		magic_map? {3'b111, screenpage, bus.a[14:13]} :
+		div_map & ~bus.a[14] & ~bus.a[15] & bus.a[13]? {2'b01, div_page} :
+		div_map & ~bus.a[14] & ~bus.a[15]? {2'b01, 4'b0011} :
+		port_dffd_d3 & bus.a[15]? {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} :
+		port_dffd_d3 & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
+		(port_1ffd[2] == 1'b0 && port_1ffd[0] == 1'b1)? {2'b11, port_1ffd[1], bus.a[15], bus.a[14], bus.a[13]} :
+		(port_1ffd == 3'b101)? {2'b11, ~(bus.a[15] & bus.a[14]), bus.a[15], bus.a[14]} :
+		(port_1ffd == 3'b111)? {2'b11, ~(bus.a[15] & bus.a[14]), (bus.a[15] | bus.a[14]), bus.a[14]} :
+		bus.a[15] & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
+		{2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} ;
+end
+ 
+reg [16:14] rom_a;
+always @(posedge clk28) begin
+	rom_a <=
+		magic_map? 3'd2 :
+		div_map? 3'd3 :
+		(rom_plus3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b0)? 3'd4 :
+		(rom_plus3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b1)? 3'd5 :
+		(rom_plus3 && port_1ffd[2] == 1'b1 && rompage128 == 1'b0)? 3'd6 :
+		(rompage128 == 1'b1 && rom_alt48 == 1'b1)? 3'd7 :
+		(rompage128 == 1'b1)? 3'd1 :
+		3'd0;
+end
+
+assign va[18:0] =
+	rom2ram_ram_wren? {4'b0000, rom2ram_ram_address} :
+	screen_read && screen_read_up? {2'b00, 3'b111, 8'b11111111, screen_up_addr} :
+	screen_read && snow? {3'b111, screenpage, screen_addr[14:8], bus.a[7:0]} :
+	screen_read? {3'b111, screenpage, screen_addr} :
+	up_write_req? {2'b00, 3'b111, 8'b11111111, up_addr_reg[5:0]} :
+	romreq? {2'b00, rom_a[16:14], bus.a[13], {13{1'bz}}} :
+	{ram_a[18:13], {13{1'bz}}};
+
+assign vd[7:0] =
+	rom2ram_ram_wren? rom2ram_dataout :
+	port_ff3b_rd? port_ff3b_data :
+	ay_rd0? ay_dout0 :
+	ay_rd1? ay_dout1 :
+	div_dout_active? div_dout :
+	ports_dout_active? ports_dout :
+	cpucontrol_dout_active? cpucontrol_dout :
+	{8{1'bz}};
+
+	
+endmodule
