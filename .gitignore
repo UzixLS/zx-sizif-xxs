@@ -1,0 +1,44 @@
+## Kicad
+pcb/**/*-lib-table
+pcb/**/*-cache
+pcb/**/*-rescue.lib
+pcb/**/*.sch-bak
+pcb/**/*.kicad_pcb-bak
+pcb/**/*.dcm
+pcb/**/*.kicad_prl
+pcb/**/*-backups/
+pcb/**/*.xml
+pcb/**/out/
+pcb.*/
+pcb/rev*~*/
+
+## Quartus
+fpga/**/.qsys_edit/
+fpga/**/db/
+fpga/**/greybox_tmp/
+fpga/**/incremental_db/
+fpga/**/output/
+fpga/**/*.dpf
+fpga/**/*.cdf
+fpga/**/*.qws
+fpga/**/*.srf
+fpga/**/*.stp
+fpga/**/simulation/
+fpga.*/
+
+## Testbench
+fpga_tb/ivl_vhdl_work/
+fpga_tb/work/
+fpga_tb/*.gtkw
+fpga_tb/*.vcd
+fpga_tb/*.bin
+fpga_tb/*.mem
+fpga_tb.*/
+
+## Etc.
+*.bak
+*.*~
+*.sublime-*
+rom/sizif-*.rom
+rom_src/*.bin
+rom_src.*/
