@@ -33,17 +33,17 @@
 //applicable agreement for further details.
 
 
-//altmem_init CBX_AUTO_BLACKBOX="ALL" DEVICE_FAMILY="Cyclone" INIT_TO_ZERO="NO" NUMWORDS=32768 PORT_ROM_DATA_READY="PORT_USED" ROM_READ_LATENCY=1 WIDTH=8 WIDTHAD=15 clock datain dataout init init_busy ram_address ram_wren rom_address rom_data_ready rom_rden
+//altmem_init CBX_AUTO_BLACKBOX="ALL" DEVICE_FAMILY="Cyclone" INIT_TO_ZERO="NO" NUMWORDS=131072 PORT_ROM_DATA_READY="PORT_USED" ROM_READ_LATENCY=1 WIDTH=8 WIDTHAD=17 clock datain dataout init init_busy ram_address ram_wren rom_address rom_data_ready rom_rden
 //VERSION_BEGIN 13.0 cbx_altmem_init 2013:06:12:18:03:33:SJ cbx_altsyncram 2013:06:12:18:03:33:SJ cbx_cycloneii 2013:06:12:18:03:33:SJ cbx_lpm_add_sub 2013:06:12:18:03:33:SJ cbx_lpm_compare 2013:06:12:18:03:33:SJ cbx_lpm_counter 2013:06:12:18:03:33:SJ cbx_lpm_decode 2013:06:12:18:03:33:SJ cbx_lpm_mux 2013:06:12:18:03:33:SJ cbx_mgl 2013:06:12:18:33:59:SJ cbx_stratix 2013:06:12:18:03:33:SJ cbx_stratixii 2013:06:12:18:03:33:SJ cbx_stratixiii 2013:06:12:18:03:33:SJ cbx_stratixv 2013:06:12:18:03:33:SJ cbx_util_mgl 2013:06:12:18:03:33:SJ  VERSION_END
 // synthesis VERILOG_INPUT_VERSION VERILOG_2001
 // altera message_off 10463
 
 
-//synthesis_resources = lpm_compare 2 lpm_counter 2 lut 30 
+//synthesis_resources = lpm_compare 2 lpm_counter 2 lut 32 
 //synopsys translate_off
 `timescale 1 ps / 1 ps
 //synopsys translate_on
-module  rom2ram_meminit_kqn
+module  rom2ram_meminit_qrn
 	( 
 	clock,
 	datain,
@@ -60,9 +60,9 @@ module  rom2ram_meminit_kqn
 	output   [7:0]  dataout;
 	input   init;
 	output   init_busy;
-	output   [14:0]  ram_address;
+	output   [16:0]  ram_address;
 	output   ram_wren;
-	output   [14:0]  rom_address;
+	output   [16:0]  rom_address;
 	input   rom_data_ready;
 	output   rom_rden;
 `ifndef ALTERA_RESERVED_QIS
@@ -75,8 +75,8 @@ module  rom2ram_meminit_kqn
 `endif
 
 	reg	[0:0]	capture_init;
-	reg	[14:0]	delay_addr;
-	wire	[14:0]	wire_delay_addr_ena;
+	reg	[16:0]	delay_addr;
+	wire	[16:0]	wire_delay_addr_ena;
 	reg	[7:0]	delay_data;
 	wire	[7:0]	wire_delay_data_ena;
 	reg	[2:0]	prev_state;
@@ -88,7 +88,7 @@ module  rom2ram_meminit_kqn
 	wire  wire_addr_cmpr_alb;
 	wire  wire_wait_cmpr_aeb;
 	wire  wire_wait_cmpr_alb;
-	wire  [14:0]   wire_addr_ctr_q;
+	wire  [16:0]   wire_addr_ctr_q;
 	wire  [0:0]   wire_wait_ctr_q;
 	wire  [0:0]  addrct_eq_numwords;
 	wire  [0:0]  addrct_lt_numwords;
@@ -198,8 +198,20 @@ module  rom2ram_meminit_kqn
 	// synopsys translate_on
 	always @ ( posedge clock)
 		if (wire_delay_addr_ena[14:14] == 1'b1)   delay_addr[14:14] <= wire_addr_ctr_q[14:14];
+	// synopsys translate_off
+	initial
+		delay_addr[15:15] = 0;
+	// synopsys translate_on
+	always @ ( posedge clock)
+		if (wire_delay_addr_ena[15:15] == 1'b1)   delay_addr[15:15] <= wire_addr_ctr_q[15:15];
+	// synopsys translate_off
+	initial
+		delay_addr[16:16] = 0;
+	// synopsys translate_on
+	always @ ( posedge clock)
+		if (wire_delay_addr_ena[16:16] == 1'b1)   delay_addr[16:16] <= wire_addr_ctr_q[16:16];
 	assign
-		wire_delay_addr_ena = {15{(clken & rom_data_capture_state)}};
+		wire_delay_addr_ena = {17{(clken & rom_data_capture_state)}};
 	// synopsys translate_off
 	initial
 		delay_data[0:0] = 0;
@@ -297,7 +309,7 @@ module  rom2ram_meminit_kqn
 	.aleb(),
 	.aneb(),
 	.dataa(delay_addr),
-	.datab({15{1'b1}})
+	.datab({17{1'b1}})
 	`ifndef FORMAL_VERIFICATION
 	// synopsys translate_off
 	`endif
@@ -310,7 +322,7 @@ module  rom2ram_meminit_kqn
 	`endif
 	);
 	defparam
-		addr_cmpr.lpm_width = 15,
+		addr_cmpr.lpm_width = 17,
 		addr_cmpr.lpm_type = "lpm_compare";
 	lpm_compare   wait_cmpr
 	( 
@@ -353,7 +365,7 @@ module  rom2ram_meminit_kqn
 	.aload(1'b0),
 	.aset(1'b0),
 	.cin(1'b1),
-	.data({15{1'b0}}),
+	.data({17{1'b0}}),
 	.sload(1'b0),
 	.sset(1'b0),
 	.updown(1'b1)
@@ -363,9 +375,9 @@ module  rom2ram_meminit_kqn
 	);
 	defparam
 		addr_ctr.lpm_direction = "UP",
-		addr_ctr.lpm_modulus = 32768,
+		addr_ctr.lpm_modulus = 131072,
 		addr_ctr.lpm_port_updown = "PORT_UNUSED",
-		addr_ctr.lpm_width = 15,
+		addr_ctr.lpm_width = 17,
 		addr_ctr.lpm_type = "lpm_counter";
 	lpm_counter   wait_ctr
 	( 
@@ -416,7 +428,7 @@ module  rom2ram_meminit_kqn
 		rom_data_capture_state = (((~ state_reg[2]) & state_reg[1]) & (~ state_reg[0])),
 		rom_rden = (((~ prev_state[2]) & (((~ prev_state[1]) & (~ prev_state[0])) | (prev_state[1] & prev_state[0]))) & (((~ state_reg[2]) & (~ state_reg[1])) & state_reg[0])),
 		state_machine_clken = (clken & ((idle_state & capture_init) | ((rom_data_capture_state | done_state) | (capture_init & (((~ (rom_addr_state & (~ rom_data_ready))) | (rom_addr_state & rom_data_ready)) | (ram_write_state & addrct_eq_numwords))))));
-endmodule //rom2ram_meminit_kqn
+endmodule //rom2ram_meminit_qrn
 //VALID FILE
 
 
@@ -441,25 +453,25 @@ module rom2ram (
 	input	  rom_data_ready;
 	output	[7:0]  dataout;
 	output	  init_busy;
-	output	[14:0]  ram_address;
+	output	[16:0]  ram_address;
 	output	  ram_wren;
-	output	[14:0]  rom_address;
+	output	[16:0]  rom_address;
 	output	  rom_rden;
 
-	wire [14:0] sub_wire0;
+	wire [16:0] sub_wire0;
 	wire  sub_wire1;
-	wire [14:0] sub_wire2;
+	wire [16:0] sub_wire2;
 	wire [7:0] sub_wire3;
 	wire  sub_wire4;
 	wire  sub_wire5;
-	wire [14:0] ram_address = sub_wire0[14:0];
+	wire [16:0] ram_address = sub_wire0[16:0];
 	wire  ram_wren = sub_wire1;
-	wire [14:0] rom_address = sub_wire2[14:0];
+	wire [16:0] rom_address = sub_wire2[16:0];
 	wire [7:0] dataout = sub_wire3[7:0];
 	wire  init_busy = sub_wire4;
 	wire  rom_rden = sub_wire5;
 
-	rom2ram_meminit_kqn	rom2ram_meminit_kqn_component (
+	rom2ram_meminit_qrn	rom2ram_meminit_qrn_component (
 				.clock (clock),
 				.init (init),
 				.datain (datain),
@@ -483,11 +495,11 @@ endmodule
 // Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone"
 // Retrieval info: CONSTANT: LPM_HINT STRING "UNUSED"
 // Retrieval info: CONSTANT: LPM_TYPE STRING "altmem_init"
-// Retrieval info: CONSTANT: NUMWORDS NUMERIC "32768"
+// Retrieval info: CONSTANT: NUMWORDS NUMERIC "131072"
 // Retrieval info: CONSTANT: PORT_ROM_DATA_READY STRING "PORT_USED"
 // Retrieval info: CONSTANT: ROM_READ_LATENCY NUMERIC "1"
 // Retrieval info: CONSTANT: WIDTH NUMERIC "8"
-// Retrieval info: CONSTANT: WIDTHAD NUMERIC "15"
+// Retrieval info: CONSTANT: WIDTHAD NUMERIC "17"
 // Retrieval info: USED_PORT: clock 0 0 0 0 INPUT NODEFVAL "clock"
 // Retrieval info: CONNECT: @clock 0 0 0 0 clock 0 0 0 0
 // Retrieval info: USED_PORT: datain 0 0 8 0 INPUT NODEFVAL "datain[7..0]"
@@ -498,12 +510,12 @@ endmodule
 // Retrieval info: CONNECT: @init 0 0 0 0 init 0 0 0 0
 // Retrieval info: USED_PORT: init_busy 0 0 0 0 OUTPUT NODEFVAL "init_busy"
 // Retrieval info: CONNECT: init_busy 0 0 0 0 @init_busy 0 0 0 0
-// Retrieval info: USED_PORT: ram_address 0 0 15 0 OUTPUT NODEFVAL "ram_address[14..0]"
-// Retrieval info: CONNECT: ram_address 0 0 15 0 @ram_address 0 0 15 0
+// Retrieval info: USED_PORT: ram_address 0 0 17 0 OUTPUT NODEFVAL "ram_address[16..0]"
+// Retrieval info: CONNECT: ram_address 0 0 17 0 @ram_address 0 0 17 0
 // Retrieval info: USED_PORT: ram_wren 0 0 0 0 OUTPUT NODEFVAL "ram_wren"
 // Retrieval info: CONNECT: ram_wren 0 0 0 0 @ram_wren 0 0 0 0
-// Retrieval info: USED_PORT: rom_address 0 0 15 0 OUTPUT NODEFVAL "rom_address[14..0]"
-// Retrieval info: CONNECT: rom_address 0 0 15 0 @rom_address 0 0 15 0
+// Retrieval info: USED_PORT: rom_address 0 0 17 0 OUTPUT NODEFVAL "rom_address[16..0]"
+// Retrieval info: CONNECT: rom_address 0 0 17 0 @rom_address 0 0 17 0
 // Retrieval info: USED_PORT: rom_data_ready 0 0 0 0 INPUT NODEFVAL "rom_data_ready"
 // Retrieval info: CONNECT: @rom_data_ready 0 0 0 0 rom_data_ready 0 0 0 0
 // Retrieval info: USED_PORT: rom_rden 0 0 0 0 OUTPUT NODEFVAL "rom_rden"

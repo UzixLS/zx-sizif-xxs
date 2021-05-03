@@ -77,7 +77,7 @@ reg up_en;
 reg [1:0] r, g, b;
 reg hsync;
 wire blink;
-wire [2:0] screen_border = {border[2] ^ ~sd_cd, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
+wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
 wire screen_read, screen_load, screen_read_up;
 wire [14:0] screen_addr;
 wire [5:0] screen_up_addr;
@@ -175,6 +175,26 @@ cpucontrol cpucontrol0(
 );
 
 
+/* KEYBOARD */
+reg ps2_clk_out, ps2_dat_out;
+reg [4:0] ps2_kd;
+reg key_magic, key_reset;
+ps2 #(.CLK_FREQ(28_000_000)) ps2_0 (
+	.rst_n(rst_n),
+	.clk(clk28),
+	.ps2_clk_in(ps2_clk),
+	.ps2_dat_in(ps2_data),
+	.ps2_clk_out(ps2_clk_out),
+	.ps2_dat_out(ps2_dat_out),
+	.zxkb_addr(bus.a[15:8]),
+	.zxkb_data(ps2_kd),
+	.key_magic(key_magic),
+	.key_reset(key_reset)
+);
+assign ps2_clk = (ps2_clk_out == 0)? 1'b0 : 1'bz;
+assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
+
+
 /* MAGIC */
 reg magic_mode, magic_map;
 wire magic_active_next;
@@ -189,7 +209,7 @@ magic magic0(
 	.n_int_next(n_int_next),
 	.n_nmi(n_nmi),
 
-	.magic_button(0),
+	.magic_button(key_magic),
 
 	.magic_mode(magic_mode),
 	.magic_map(magic_map),
@@ -234,7 +254,7 @@ ports ports0 (
 	.timings(timings),
 	.screen_load(screen_load),
 	.attr_next(attr_next),
-	.kd(5'b11111),
+	.kd(ps2_kd),
 	.kempston_data(8'b11111111),
 	.joy_sinclair(joy_sinclair),
 	.magic_active_next(magic_active_next),
@@ -370,7 +390,7 @@ divmmc divmmc0(
 	.d_out(div_dout),
 	.d_out_active(div_dout_active),
 
-	.sd_cd(sd_cd | 1),
+	.sd_cd(sd_cd),
 	.sd_miso(sd_miso_tape_in),
 	.sd_mosi(sd_mosi0),
 	.sd_sck(sd_sck),
@@ -426,7 +446,7 @@ end
 
 /* MEMORY INITIALIZER */
 wire rom2ram_clk = clk35;
-wire [14:0] rom2ram_ram_address, rom2ram_rom_address;
+wire [16:0] rom2ram_ram_address, rom2ram_rom_address;
 wire [7:0] rom2ram_datain, rom2ram_dataout;
 wire rom2ram_rom_rden;
 wire rom2ram_rom_data_ready;
@@ -526,7 +546,7 @@ always @(posedge clk28) begin
 end
 
 assign va[18:0] =
-	rom2ram_ram_wren? {4'b0000, rom2ram_ram_address} :
+	rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
 	screen_read && screen_read_up? {2'b00, 3'b111, 8'b11111111, screen_up_addr} :
 	screen_read && snow? {3'b111, screenpage, screen_addr[14:8], bus.a[7:0]} :
 	screen_read? {3'b111, screenpage, screen_addr} :

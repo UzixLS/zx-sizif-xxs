@@ -7,7 +7,7 @@
 	<width>1</width>
 	<mode>7</mode>
 	<hex_block>
-		<hex_filename>../../rom/testrom.hex</hex_filename>
+		<hex_filename>../../rom/sizif.hex</hex_filename>
 		<hex_addressing>relative</hex_addressing>
 		<hex_offset>0</hex_offset>
 	</hex_block>

@@ -54,7 +54,6 @@ set_instance_assignment -name CLOCK_SETTINGS clkcpu -to clkcpu
 set_global_assignment -name AUTO_RESOURCE_SHARING OFF
 set_global_assignment -name AUTO_LCELL_INSERTION OFF
 set_global_assignment -name FMAX_REQUIREMENT "32 MHz" -section_id clk32
-set_instance_assignment -name CLOCK_SETTINGS clk32 -to clk32
 set_global_assignment -name FMAX_REQUIREMENT "8 MHz" -section_id clk8
 set_global_assignment -name FMAX_REQUIREMENT "4 MHz" -section_id clk4
 set_instance_assignment -name CLOCK_SETTINGS clk8 -to "lpm_counter:wgcnt_rtl_1|dffs[1]"
@@ -152,7 +151,10 @@ set_location_assignment PIN_99 -to va[8]
 set_location_assignment PIN_100 -to va[9]
 set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED WITH WEAK PULL-UP"
 set_location_assignment PIN_53 -to n_iorq
-set_location_assignment PIN_10 -to clk28
+set_global_assignment -name ENABLE_SIGNALTAP OFF
+set_global_assignment -name USE_SIGNALTAP_FILE output/stp1.stp
+set_global_assignment -name RTLV_GROUP_RELATED_NODES OFF
+set_global_assignment -name VERILOG_INCLUDE_FILE ../rtl/ps2_codes.vh
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/mixer.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/soundrive.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/screen.sv
@@ -162,6 +164,8 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/divmmc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/cpucontrol.sv
 set_global_assignment -name VERILOG_FILE ../rtl/chroma_gen.v
 set_global_assignment -name VHDL_FILE ../rtl/ym2149.vhd
+set_global_assignment -name VERILOG_FILE ../rtl/ps2.v
+set_global_assignment -name VERILOG_FILE ../rtl/ps2_rxtx.v
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/common.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/top.sv
 set_global_assignment -name SDC_FILE clocks.sdc
@@ -169,9 +173,8 @@ set_global_assignment -name CDF_FILE output/zx_ula.cdf
 set_global_assignment -name QIP_FILE ip/pll.qip
 set_global_assignment -name QIP_FILE ip/rom2ram.qip
 set_global_assignment -name QIP_FILE ip/asmi.qip
-set_global_assignment -name ENABLE_SIGNALTAP OFF
-set_global_assignment -name USE_SIGNALTAP_FILE stp1.stp
-set_global_assignment -name SIGNALTAP_FILE stp1.stp
-set_global_assignment -name SLD_FILE "stp1_auto_stripped.stp"
-set_global_assignment -name RTLV_GROUP_RELATED_NODES OFF
+set_global_assignment -name SLD_FILE "/home/uzix/zx-sizif-xxs/fpga/syn/output/stp1_auto_stripped.stp"
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to sd_miso_tape_in
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to n_iorq
+set_location_assignment PIN_10 -to clk_in
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

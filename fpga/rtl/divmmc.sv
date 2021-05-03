@@ -126,8 +126,11 @@ end
 
 
 assign div_map = div_automap | div_conmem;
-assign div_ram = (div_conmem == 1 && bus.a[13] == 1) || (div_automap == 1 && bus.a[13] == 1) || (div_conmem == 0 && div_automap == 1 && div_mapram == 1);
-assign div_ramwr_mask = bus.a[15] == 0 && bus.a[14] == 0 && (bus.a[13] == 0 || div_page == 4'b0011) && div_conmem == 0 && div_automap == 1 && div_mapram == 1;
+assign div_ram = (div_conmem == 1 && bus.a[13] == 1) ||
+	(div_automap == 1 && bus.a[13] == 1) ||
+	(div_conmem == 0 && div_automap == 1 && div_mapram == 1);
+assign div_ramwr_mask = bus.a[15] == 0 && bus.a[14] == 0 &&
+	(bus.a[13] == 0 || div_page == 4'b0011) && div_conmem == 0 && div_automap == 1 && div_mapram == 1;
 
 assign d_out_active = spi_rd;
 assign d_out = spi_reg;
