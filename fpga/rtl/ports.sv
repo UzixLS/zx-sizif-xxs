@@ -5,6 +5,8 @@ module ports(
 	input en_128k,
 	input en_plus3,
 	input en_profi,
+	input en_kempston,
+	input en_sinclair,
 
 	cpu_bus bus,
 	output [7:0] d_out,
@@ -16,9 +18,8 @@ module ports(
 	input [7:0] attr_next,
 	input [4:0] kd,
 	input [7:0] kempston_data,
-	input joy_sinclair,
 	input magic_active_next,
-	input sd_miso_tape_in,
+	input tape_in,
 
 	output reg tape_out,
 	output reg beeper,
@@ -54,7 +55,7 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 reg [4:0] kd0;
-wire [7:0] port_fe_data = {~magic_active_next, sd_miso_tape_in, 1'b1, kd0};
+wire [7:0] port_fe_data = {~magic_active_next, tape_in, 1'b1, kd0};
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
 		beeper <= 0;
@@ -72,7 +73,7 @@ always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
 		kd0 <= 5'b11111;
 	end
-	else if (joy_sinclair) begin
+	else if (en_sinclair) begin
 		kd0 <= kd
 			& (bus.a[12] == 0? {~kempston_data[1], ~kempston_data[0], ~kempston_data[2], ~kempston_data[3], ~kempston_data[4]} : 5'b11111) // 6-0 keys
 			& (bus.a[15] == 0? {1'b1, ~kempston_data[6], ~kempston_data[5], 2'b11} : 5'b11111 ) ; // b-space keys
@@ -130,10 +131,21 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 
+/* KEMPSTON */
+reg kempston_rd;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n)
+		kempston_rd <= 0;
+	else
+		kempston_rd <= en_kempston && bus.ioreq && bus.rd && bus.a[7:5] == 3'b000;
+end
+
+
 /* BUS CONTROLLER */
-assign d_out_active = port_fe_rd | port_ff_rd;
+assign d_out_active = port_fe_rd | port_ff_rd | kempston_rd;
 
 assign d_out = 
+  kempston_rd? kempston_data :
 	port_fe_rd? port_fe_data :
 	port_ff_data ;
 

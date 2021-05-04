@@ -51,8 +51,6 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 timings_t timings;
 turbo_t turbo;
 wire clkwait;
-reg magic_beeper;
-wire pause = 0;
 
 reg n_iorq_delayed;
 always @(posedge clk28)
@@ -71,12 +69,41 @@ always @* begin
 end
 
 
+/* KEYBOARD */
+reg ps2_clk_out, ps2_dat_out;
+reg [4:0] ps2_kd;
+reg key_magic, key_reset, pause;
+wire usrrst_n = ~key_reset;
+reg joy_up, joy_down, joy_left, joy_right, joy_fire;
+ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
+	.rst_n(rst_n),
+	.clk(clk28),
+	.ps2_clk_in(ps2_clk),
+	.ps2_dat_in(ps2_data),
+	.ps2_clk_out(ps2_clk_out),
+	.ps2_dat_out(ps2_dat_out),
+	.zxkb_addr(bus.a[15:8]),
+	.zxkb_data(ps2_kd),
+	.key_magic(key_magic),
+	.key_reset(key_reset),
+	.key_pause(pause),
+	.joy_up(joy_up),
+	.joy_down(joy_down),
+	.joy_left(joy_left),
+	.joy_right(joy_right),
+	.joy_fire(joy_fire)
+);
+assign ps2_clk = (ps2_clk_out == 0)? 1'b0 : 1'bz;
+assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
+
+
 /* SCREEN CONTROLLER */
 reg [2:0] border;
 reg up_en;
 reg [1:0] r, g, b;
 reg hsync;
 wire blink;
+reg magic_beeper;
 wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
 wire screen_read, screen_load, screen_read_up;
 wire [14:0] screen_addr;
@@ -144,7 +171,7 @@ logic n_int_next;
 wire snow, clkcpu_ck;
 wire init_done;
 cpucontrol cpucontrol0(
-	.rst_n(rst_n),
+	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 	.clk14(clk14),
 	.clk7(clk7),
@@ -175,33 +202,13 @@ cpucontrol cpucontrol0(
 );
 
 
-/* KEYBOARD */
-reg ps2_clk_out, ps2_dat_out;
-reg [4:0] ps2_kd;
-reg key_magic, key_reset;
-ps2 #(.CLK_FREQ(28_000_000)) ps2_0 (
-	.rst_n(rst_n),
-	.clk(clk28),
-	.ps2_clk_in(ps2_clk),
-	.ps2_dat_in(ps2_data),
-	.ps2_clk_out(ps2_clk_out),
-	.ps2_dat_out(ps2_dat_out),
-	.zxkb_addr(bus.a[15:8]),
-	.zxkb_data(ps2_kd),
-	.key_magic(key_magic),
-	.key_reset(key_reset)
-);
-assign ps2_clk = (ps2_clk_out == 0)? 1'b0 : 1'bz;
-assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
-
-
 /* MAGIC */
 reg magic_mode, magic_map;
 wire magic_active_next;
 reg n_nmi0;
 reg extlock, joy_sinclair, rom_plus3, rom_alt48, ay_abc, ay_mono;
 magic magic0(
-	.rst_n(rst_n),
+	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 
 	.bus(bus),
@@ -239,26 +246,27 @@ reg [2:0] port_1ffd;
 reg port_dffd_d3;
 reg port_dffd_d4;
 ports ports0 (
-	.rst_n(rst_n),
+	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 
 	.bus(bus),
 	.d_out(ports_dout),
 	.d_out_active(ports_dout_active),
 
-	.en_128k(1),
+	.en_128k(1'b1),
 	.en_plus3(!extlock),
 	.en_profi(!extlock),
+	.en_kempston(!joy_sinclair),
+	.en_sinclair(joy_sinclair),
 
 	.clkcpu_ck(clkcpu_ck),
 	.timings(timings),
 	.screen_load(screen_load),
 	.attr_next(attr_next),
 	.kd(ps2_kd),
-	.kempston_data(8'b11111111),
-	.joy_sinclair(joy_sinclair),
+	.kempston_data({3'b000, joy_fire, joy_up, joy_down, joy_left, joy_right}),
 	.magic_active_next(magic_active_next),
-	.sd_miso_tape_in(sd_miso_tape_in),
+	.tape_in(sd_miso_tape_in),
 
 	.tape_out(tape_out),
 	.beeper(beeper),
@@ -336,7 +344,7 @@ YM2149 ym2149_1(
 /* COVOX & SOUNDRIVE */
 reg [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
 soundrive soundrive0(
-	.rst_n(rst_n),
+	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 	.en_covox(!extlock),
 	.en_soundrive(!extlock),
@@ -380,7 +388,7 @@ wire [7:0] div_dout;
 reg [3:0] div_page;
 reg sd_mosi0;
 divmmc divmmc0(
-	.rst_n(rst_n),
+	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 	.ck14(ck14),
 	.ck7(ck7),
