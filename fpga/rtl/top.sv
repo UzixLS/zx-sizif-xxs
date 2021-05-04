@@ -281,65 +281,30 @@ ports ports0 (
 );
 
 
-/* AY */
-reg ay_clk;
-reg ay_bdir;
-reg ay_bc1;
-reg ay_sel;
-wire ay_rd0 = ay_bc1 & ~ay_bdir & ~ay_sel;
-wire ay_rd1 = ay_bc1 & ~ay_bdir &  ay_sel;
-wire port_bffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[7:0] == 8'hFD;
-wire port_fffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[7:0] == 8'hFD;
-always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n) begin
-		ay_clk <= 0;
-		ay_bc1 <= 0;
-		ay_bdir <= 0;
-	end
-	else begin
-		if (ck35)
-			ay_clk = pause | ~ay_clk;
-		ay_bc1  <= ay_sel && port_fffd;
-		ay_bdir <= ay_sel && port_bffd && bus.wr;
-		if (bus.ioreq && port_fffd && bus.wr && bus.d[7:3] == 5'b11111)
-			ay_sel <= ~bus.d[0];
-	end
-end
-
-wire [7:0] ay_dout0, ay_dout1;
+/* AY TURBOSOUND */
+wire turbosound_dout_active;
+wire [7:0] turbosound_dout;
 wire [7:0] ay_a0, ay_b0, ay_c0, ay_a1, ay_b1, ay_c1;
-YM2149 ym2149_0(
-	.CLK(clk28),
-	.ENA(1'b0),
-	.RESET_H(~rst_n),
-	.I_SEL_L(1'b1),
-	.I_DA(bus.d),
-	.O_DA(ay_dout0),
-	.busctrl_addr(ay_bc1),
-	.busctrl_we(ay_bdir & ~ay_sel),
-	.ctrl_aymode(1'b1),
-	.port_a_i(8'hff),
-	.port_b_i(8'hff),
-	.O_AUDIO_A(ay_a0),
-	.O_AUDIO_B(ay_b0),
-	.O_AUDIO_C(ay_c0)
-	);
-YM2149 ym2149_1(
-	.CLK(clk28),
-	.ENA(1'b0),
-	.RESET_H(~rst_n),
-	.I_SEL_L(1'b1),
-	.I_DA(bus.d),
-	.O_DA(ay_dout1),
-	.busctrl_addr(ay_bc1),
-	.busctrl_we(ay_bdir & ay_sel),
-	.ctrl_aymode(1'b1),
-	.port_a_i(8'hff),
-	.port_b_i(8'hff),
-	.O_AUDIO_A(ay_a1),
-	.O_AUDIO_B(ay_b1),
-	.O_AUDIO_C(ay_c1)
-	);
+turbosound turbosound0(
+	.rst_n(rst_n & usrrst_n),
+	.clk28(clk28),
+	.ck35(ck35),
+	.en(1'b0),
+	
+	.bus(bus),
+	.d_out(turbosound_dout),
+	.d_out_active(turbosound_dout_active),
+	
+	.pause(pause),
+	
+	.ay_a0(ay_a0),
+	.ay_b0(ay_b0),
+	.ay_c0(ay_c0),
+	.ay_a1(ay_a1),
+	.ay_b1(ay_b1),
+	.ay_c1(ay_c1)
+);
+
 
 /* COVOX & SOUNDRIVE */
 reg [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
@@ -565,9 +530,8 @@ assign va[18:0] =
 assign vd[7:0] =
 	rom2ram_ram_wren? rom2ram_dataout :
 	port_ff3b_rd? port_ff3b_data :
-	ay_rd0? ay_dout0 :
-	ay_rd1? ay_dout1 :
 	div_dout_active? div_dout :
+	turbosound_dout_active? turbosound_dout :
 	ports_dout_active? ports_dout :
 	cpucontrol_dout_active? cpucontrol_dout :
 	{8{1'bz}};
