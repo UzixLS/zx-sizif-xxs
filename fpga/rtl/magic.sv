@@ -40,11 +40,11 @@ always @(posedge clk28 or negedge rst_n) begin
 		if (magic_button == 1'b1 && n_int == 1'b1 && n_int_next == 1'b0)
 			magic_mode <= 1'b1;
 
-		if (magic_map && bus.mreq && bus.rd && bus.a == 16'hf000 && !magic_map_next) begin
+		if (magic_map && bus.mreq && bus.rd && bus.a_valid && bus.a == 16'hf000 && !magic_map_next) begin
 			magic_unmap_next <= 1'b1;
 			magic_mode <= 1'b0;
 		end
-		else if (magic_map && bus.mreq && bus.rd && bus.a == 16'hf008) begin
+		else if (magic_map && bus.mreq && bus.rd && bus.a_valid && bus.a == 16'hf008) begin
 			magic_unmap_next <= 1'b1;
 			magic_map_next <= 1'b1;
 		end
@@ -52,7 +52,7 @@ always @(posedge clk28 or negedge rst_n) begin
 			magic_map <= 1'b0;
 			magic_unmap_next <= 1'b0;
 		end
-		else if (magic_mode && bus.m1 && bus.mreq && (bus.a == 16'h0066 || magic_map_next)) begin
+		else if (magic_mode && bus.m1 && bus.mreq && ((bus.a_valid && bus.a == 16'h0066) || magic_map_next)) begin
 			magic_map <= 1'b1;
 			magic_map_next <= 1'b0;
 		end

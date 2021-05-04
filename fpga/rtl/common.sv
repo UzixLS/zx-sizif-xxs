@@ -15,4 +15,5 @@ interface cpu_bus();
 	wire wr;
 
 	wire ioreq;
+	wire a_valid;
 endinterface

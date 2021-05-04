@@ -52,9 +52,11 @@ timings_t timings;
 turbo_t turbo;
 wire clkwait;
 
-reg n_iorq_delayed;
-always @(posedge clk28)
+reg n_iorq_delayed, a_valid;
+always @(posedge clk28) begin
 	n_iorq_delayed <= n_iorq;
+	a_valid <= screen_read == 0;
+end
 cpu_bus bus();
 always @* begin
 	bus.a = {a[15:13], va[12:0]};
@@ -65,7 +67,8 @@ always @* begin
 	bus.rfsh = ~n_rfsh;
 	bus.rd = ~n_rd;
 	bus.wr = ~n_wr;
-	bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0;
+	bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0 && a_valid;
+	bus.a_valid = a_valid;
 end
 
 
@@ -100,7 +103,7 @@ assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
 /* SCREEN CONTROLLER */
 reg [2:0] border;
 reg up_en;
-reg [1:0] r, g, b;
+reg [2:0] r, g, b;
 reg hsync;
 wire blink;
 reg magic_beeper;
@@ -146,13 +149,15 @@ screen screen0(
 	.ck35(ck35)
 );
 
+
+/* VIDEO OUTPUT */
 always @*
-	vdac <= {r, g, b};
+	vdac <= {g[2], r[2], b[2], g[1], r[1], b[1]};
 
 reg [2:0] chroma0;
 chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
 	.cg_clock(clk40),
-	.cg_rgb({g[1],r[1],b[1]}),
+	.cg_rgb({g[2],r[2],b[2]}),
 	.cg_hsync(hsync),
 	.cg_enable(1'b1),
 	.cg_pnsel(1'b0),
@@ -380,7 +385,8 @@ divmmc divmmc0(
 	.div_ramwr_mask(div_ramwr_mask),
 	.div_wait(div_wait)
 );
-assign sd_mosi = (sd_cs == 1'b0)? sd_mosi0 : tape_out;
+///assign sd_mosi = (sd_cs == 1'b0)? sd_mosi0 : tape_out;
+assign sd_mosi = sd_mosi0;
 
 
 /* ULAPLUS */

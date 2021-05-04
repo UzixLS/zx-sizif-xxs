@@ -13,9 +13,9 @@ module screen(
 	input [2:0] border,
 	input up_en,
 
-	output reg [1:0] r,
-	output reg [1:0] g,
-	output reg [1:0] b,
+	output reg [2:0] r,
+	output reg [2:0] g,
+	output reg [2:0] b,
 	output reg vsync,
 	output reg hsync,
 	output reg csync,
@@ -186,7 +186,7 @@ wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 2) && (hc0 < ((H
 wire screen_update = vc < V_AREA && hc <= H_AREA && hc != 0 && hc0[4:0] == 5'b11110;
 wire border_update = !screen_show && ((timings == TIMINGS_PENT && ck7) || hc0[4:0] == 5'b11110);
 wire bitmap_shift = hc0[1:0] == 2'b10;
-wire screen_read_next = (screen_load || up_en) && ((!bus.iorq && !bus.mreq) || bus.rfsh || clkwait);
+wire screen_read_next = (screen_load || up_en) && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
 
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
@@ -245,15 +245,17 @@ end
 
 always @(posedge clk28) begin
 	if (blank)
-		{g, r, b} = 6'b000000;
+		{g, r, b} = 0;
 	else if (up_en) begin
-		g = pixel? up_ink[7:5] : up_paper[7:5];
-		r = pixel? up_ink[4:2] : up_paper[4:2];
-		b = pixel? up_ink[1:0] : up_paper[1:0];
+		g      = pixel? up_ink[7:5] : up_paper[7:5];
+		r      = pixel? up_ink[4:2] : up_paper[4:2];
+		b[2:1] = pixel? up_ink[1:0] : up_paper[1:0];
+		b[0]   = |b[2:1];
 	end
 	else begin
-		{g[1], r[1], b[1]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
-		{g[0], r[0], b[0]} = ((g[1] | r[1] | b[1]) & attr[6])? 3'b111 : 3'b000;
+		{g[2], r[2], b[2]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
+		{g[1], r[1], b[1]} = ((g[2] | r[2] | b[2]) & attr[6])? 3'b111 : 3'b000;
+		{g[0], r[0], b[0]} = {g[1], r[1], b[1]};
 	end
 	csync = ~(vsync0 ^ hsync0);
 	vsync = ~vsync0;
