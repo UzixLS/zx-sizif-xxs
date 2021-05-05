@@ -13,10 +13,10 @@ module soundrive(
 );
 
 wire covox_cs = en_covox && bus.ioreq && bus.a[7:0] == 8'hFB;
-wire soundrive_a_cs = en_soundrive && bus.ioreq == 0 && bus.a[7:0] == 8'h0F;
-wire soundrive_b_cs = en_soundrive && bus.ioreq == 0 && bus.a[7:0] == 8'h1F;
-wire soundrive_c_cs = en_soundrive && bus.ioreq == 0 && bus.a[7:0] == 8'h4F;
-wire soundrive_d_cs = en_soundrive && bus.ioreq == 0 && bus.a[7:0] == 8'h5F;
+wire soundrive_a_cs = en_soundrive && bus.ioreq && bus.a[7:0] == 8'h0F;
+wire soundrive_b_cs = en_soundrive && bus.ioreq && bus.a[7:0] == 8'h1F;
+wire soundrive_c_cs = en_soundrive && bus.ioreq && bus.a[7:0] == 8'h4F;
+wire soundrive_d_cs = en_soundrive && bus.ioreq && bus.a[7:0] == 8'h5F;
 
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
