@@ -163,9 +163,9 @@ chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
 	.cg_pnsel(1'b0),
 	.cg_out(chroma0)
 );
-assign chroma[0] = chroma0[1]? chroma0[0] : 1'bz;
-assign chroma[1] = chroma0[2]? chroma0[0] : 1'bz;
-assign chroma[2] = 1'bz;
+assign chroma[0] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
+assign chroma[1] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
+assign chroma[2] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
 
 
 /* CPU CONTROLLER */
