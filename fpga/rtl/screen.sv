@@ -6,12 +6,10 @@ module screen(
 
 	cpu_bus bus,
 	output [14:0] screen_addr,
-	output [5:0] up_addr,
 
 	input clkwait,
 	input timings_t timings,
 	input [2:0] border,
-	input up_en,
 
 	output reg [2:0] r,
 	output reg [2:0] g,
@@ -21,10 +19,15 @@ module screen(
 	output reg csync,
 
 	output read,
-	output read_up,
 	output blink,
 	output load,
 	output reg [7:0] attr_next,
+	
+	input up_en,
+	output [5:0] up_ink_addr,
+	output [5:0] up_paper_addr,
+	input [7:0] up_ink,
+	input [7:0] up_paper,
 
 	output [8:0] hc_out,
 	output [8:0] vc_out,
@@ -151,6 +154,7 @@ always @(posedge clk28 or negedge rst_n) begin
 	end
 end
 
+
 reg [4:0] blink_cnt;
 assign blink = blink_cnt[$bits(blink_cnt)-1];
 always @(posedge clk28 or negedge rst_n) begin
@@ -160,33 +164,30 @@ always @(posedge clk28 or negedge rst_n) begin
 		blink_cnt <= blink_cnt + 1'b1;
 end
 
+
 wire [7:0] attr_border = {2'b00, border, 3'b000};
 
 reg [7:0] bitmap, attr, bitmap_next;
-reg [7:0] up_ink, up_paper, up_ink_next, up_paper_next;
-wire pixel = bitmap[7];
 reg screen_read;
 assign read = screen_read;
-reg [1:0] screen_read_step;
-wire screen_read_step_reset = hc0[4:0] == 5'b11111 || hc0_reset;
-wire bitmap_read = screen_read && screen_read_step == 2'd0;
-wire attr_read = screen_read && screen_read_step == 2'd1;
-wire up_ink_read = screen_read && screen_read_step == 2'd2;
-wire up_paper_read = screen_read && screen_read_step == 2'd3;
-assign read_up = up_ink_read || up_paper_read;
+reg screen_read_step;
+wire bitmap_read = screen_read && screen_read_step == 1'd1;
+wire attr_read = screen_read && screen_read_step == 1'd0;
 assign screen_addr =  bitmap_read? 
 							{ 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
 							{ 5'b10110, vc[7:3], hc[7:3] };
-assign up_addr = up_ink_read?
-							{ attr_next[7:6], 1'b0, attr_next[2:0] } :
-							{ attr_next[7:6], 1'b1, attr_next[5:3] };
+
 wire screen_load = (vc < V_AREA) && (hc < H_AREA || hc0_reset);
 assign load = screen_load;
 wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 2) && (hc0 < ((H_AREA + SCREEN_DELAY)<<2) - 2);
 wire screen_update = vc < V_AREA && hc <= H_AREA && hc != 0 && hc0[4:0] == 5'b11110;
 wire border_update = !screen_show && ((timings == TIMINGS_PENT && ck7) || hc0[4:0] == 5'b11110);
 wire bitmap_shift = hc0[1:0] == 2'b10;
-wire screen_read_next = (screen_load || up_en) && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
+wire screen_read_next = screen_load && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
+
+reg [7:0] up_ink0, up_paper0;
+assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
+assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
 
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
@@ -196,22 +197,12 @@ always @(posedge clk28 or negedge rst_n) begin
 		bitmap <= 0;
 		attr_next <= 0;
 		bitmap_next <= 0;
-		up_ink <= 0;
-		up_paper <= 0;
-		up_ink_next <= 0;
-		up_paper_next <= 0;
 	end
 	else begin
 		if (ck14) begin
-			screen_read <= screen_read_next;
-			if (screen_read && screen_read_step[0] && !up_en)
-				screen_read_step <= 0;
-			else if (!screen_load && up_en)
-				screen_read_step <= 2'd3;
-			else if (screen_read_step_reset)
-				screen_read_step <= 0;
-			else if (screen_read)
+			if (screen_read)
 				screen_read_step <= screen_read_step + 1'b1;
+			screen_read <= screen_read_next;
 
 			if (attr_read)
 				attr_next <= bus.d;
@@ -219,10 +210,6 @@ always @(posedge clk28 or negedge rst_n) begin
 				attr_next <= attr_border;
 			if (bitmap_read)
 				bitmap_next <= bus.d;
-			if (up_ink_read)
-				up_ink_next <= bus.d;
-			if (up_paper_read)
-				up_paper_next <= bus.d;
 		end
 
 		if (border_update)
@@ -234,22 +221,23 @@ always @(posedge clk28 or negedge rst_n) begin
 			bitmap <= bitmap_next;
 		else if (bitmap_shift)
 			bitmap <= {bitmap[6:0], 1'b0};
-
+			
 		if (screen_update)
-			up_ink <= up_ink_next;
+			up_ink0 <= up_ink;
 		if (screen_update || (!screen_show && !screen_load))
-			up_paper <= up_paper_next;
+			up_paper0 <= up_paper;
 	end
 end
 
 
+wire pixel = bitmap[7];
 always @(posedge clk28) begin
 	if (blank)
 		{g, r, b} = 0;
 	else if (up_en) begin
-		g      = pixel? up_ink[7:5] : up_paper[7:5];
-		r      = pixel? up_ink[4:2] : up_paper[4:2];
-		b[2:1] = pixel? up_ink[1:0] : up_paper[1:0];
+		g      = pixel? up_ink0[7:5] : up_paper0[7:5];
+		r      = pixel? up_ink0[4:2] : up_paper0[4:2];
+		b[2:1] = pixel? up_ink0[1:0] : up_paper0[1:0];
 		b[0]   = |b[2:1];
 	end
 	else begin
@@ -261,5 +249,6 @@ always @(posedge clk28) begin
 	vsync = ~vsync0;
 	hsync = ~hsync0;
 end
+
 
 endmodule

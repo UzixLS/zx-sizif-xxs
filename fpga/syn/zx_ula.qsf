@@ -100,12 +100,12 @@ set_location_assignment PIN_22 -to chroma[0]
 set_location_assignment PIN_23 -to chroma[1]
 set_location_assignment PIN_24 -to chroma[2]
 set_location_assignment PIN_25 -to csync
-set_location_assignment PIN_26 -to vdac[5]
-set_location_assignment PIN_27 -to vdac[4]
-set_location_assignment PIN_28 -to vdac[3]
-set_location_assignment PIN_29 -to vdac[2]
-set_location_assignment PIN_34 -to vdac[1]
-set_location_assignment PIN_35 -to vdac[0]
+set_location_assignment PIN_26 -to luma[5]
+set_location_assignment PIN_27 -to luma[4]
+set_location_assignment PIN_28 -to luma[3]
+set_location_assignment PIN_29 -to luma[2]
+set_location_assignment PIN_34 -to luma[1]
+set_location_assignment PIN_35 -to luma[0]
 set_location_assignment PIN_36 -to snd_l
 set_location_assignment PIN_37 -to snd_r
 set_location_assignment PIN_38 -to sd_cd
@@ -178,4 +178,5 @@ set_global_assignment -name CDF_FILE output/zx_ula.cdf
 set_global_assignment -name QIP_FILE ip/pll.qip
 set_global_assignment -name QIP_FILE ip/rom2ram.qip
 set_global_assignment -name QIP_FILE ip/asmi.qip
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/ulaplus.sv
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

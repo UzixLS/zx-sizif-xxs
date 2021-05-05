@@ -22,7 +22,7 @@ module zx_ula(
 	output reg n_int,
 	output n_nmi,
 
-	output reg [5:0] vdac,
+	output reg [5:0] luma,
 	output reg [2:0] chroma,
 	output reg csync,
 
@@ -102,15 +102,16 @@ assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
 
 /* SCREEN CONTROLLER */
 reg [2:0] border;
-reg up_en;
+reg magic_beeper;
+wire blink;
+wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
 reg [2:0] r, g, b;
 reg hsync;
-wire blink;
-reg magic_beeper;
-wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
+reg up_en;
+wire [5:0] up_ink_addr, up_paper_addr;
+wire [7:0] up_ink, up_paper;
 wire screen_read, screen_load, screen_read_up;
 wire [14:0] screen_addr;
-wire [5:0] screen_up_addr;
 wire [7:0] attr_next;
 wire [8:0] vc, hc;
 wire clk14, clk7, clk35, ck14, ck7, ck35;
@@ -120,12 +121,10 @@ screen screen0(
 
 	.bus(bus),
 	.screen_addr(screen_addr),
-	.up_addr(screen_up_addr),
 
 	.clkwait(clkwait),
 	.timings(timings),
 	.border(screen_border),
-	.up_en(up_en),
 
 	.r(r),
 	.g(g),
@@ -135,9 +134,14 @@ screen screen0(
 
 	.blink(blink),
 	.read(screen_read),
-	.read_up(screen_read_up),
 	.load(screen_load),
 	.attr_next(attr_next),
+
+	.up_en(up_en),
+	.up_ink_addr(up_ink_addr),
+	.up_paper_addr(up_paper_addr),
+	.up_ink(up_ink),
+	.up_paper(up_paper),
 
 	.vc_out(vc),
 	.hc_out(hc),
@@ -152,7 +156,7 @@ screen screen0(
 
 /* VIDEO OUTPUT */
 always @*
-	vdac <= {g[2], r[2], b[2], g[1], r[1], b[1]};
+	luma <= {g[2], r[2], b[2], g[1], r[1], b[1]};
 
 reg [2:0] chroma0;
 chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
@@ -390,37 +394,23 @@ assign sd_mosi = sd_mosi0;
 
 
 /* ULAPLUS */
-wire port_bf3b_cs = !extlock && bus.ioreq && bus.a == 16'hbf3b;
-wire port_ff3b_cs = !extlock && bus.ioreq && bus.a == 16'hff3b;
-reg port_ff3b_rd;
-wire [7:0] port_ff3b_data = {7'b0000000, up_en};
-reg [7:0] up_addr_reg;
-reg up_write_req;
-always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n) begin
-		port_ff3b_rd <= 1'b0;
-		up_en <= 1'b0;
-		up_write_req <= 1'b0;
-		up_addr_reg <= 1'b0;
-	end
-	else begin
-		port_ff3b_rd <= port_ff3b_cs && n_rd == 1'b0;
-		if (n_wr == 1'b0) begin
-			if (port_bf3b_cs)
-				up_addr_reg <= bus.d;
-			
-			if (port_ff3b_cs) begin
-				if (up_addr_reg == 8'b01000000)
-					up_en <= bus.d[0];
-				else if (up_addr_reg[7:6] == 2'b00)
-					up_write_req <= 1'b1;
-			end
-		end
-		else begin
-			up_write_req <= 0;
-		end
-	end
-end
+wire up_dout_active;
+wire [7:0] up_dout;
+ulaplus ulaplus0(
+	.rst_n(rst_n & usrrst_n),
+	.clk28(clk28),
+	.en(!extlock),
+	
+	.bus(bus),
+	.d_out(up_dout),
+	.d_out_active(up_dout_active),
+	
+	.active(up_en),
+	.ink_addr(up_ink_addr),
+	.paper_addr(up_paper_addr),
+	.ink(up_ink),
+	.paper(up_paper)
+);
 
 
 /* MEMORY INITIALIZER */
@@ -479,7 +469,7 @@ always @(posedge clk28 or negedge rst_n) begin
 	else begin
 		romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
 			(magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd_d4 && !port_1ffd[0]));
-		ramreq = (bus.mreq && !bus.rfsh && !romreq) || up_write_req;
+		ramreq = bus.mreq && !bus.rfsh && !romreq;
 		ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
 	end
 end
@@ -489,7 +479,7 @@ assign n_vwr = ((ramreq_wr && bus.wr && !screen_read) || rom2ram_ram_wren)? 1'b0
 
 /* VA[18:13] map
  * 00xxxx 128Kb of roms
- * 00111x 16Kb of magic ram and ulaplus
+ * 00111x 16Kb of magic ram
  * 01xxxx 128Kb of divmmc memory
  * 10xxxx 128Kb of extended ram (via port dffd)
  * 11xxxx 128Kb of main ram
@@ -526,16 +516,14 @@ end
 
 assign va[18:0] =
 	rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
-	screen_read && screen_read_up? {2'b00, 3'b111, 8'b11111111, screen_up_addr} :
-	screen_read && snow? {3'b111, screenpage, screen_addr[14:8], bus.a[7:0]} :
+	screen_read && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
 	screen_read? {3'b111, screenpage, screen_addr} :
-	up_write_req? {2'b00, 3'b111, 8'b11111111, up_addr_reg[5:0]} :
 	romreq? {2'b00, rom_a[16:14], bus.a[13], {13{1'bz}}} :
 	{ram_a[18:13], {13{1'bz}}};
 
 assign vd[7:0] =
 	rom2ram_ram_wren? rom2ram_dataout :
-	port_ff3b_rd? port_ff3b_data :
+	up_dout_active? up_dout :
 	div_dout_active? div_dout :
 	turbosound_dout_active? turbosound_dout :
 	ports_dout_active? ports_dout :
