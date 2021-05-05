@@ -298,7 +298,7 @@ turbosound turbosound0(
 	.rst_n(rst_n & usrrst_n),
 	.clk28(clk28),
 	.ck35(ck35),
-	.en(1'b0),
+	.en(1'b1),
 	
 	.bus(bus),
 	.d_out(turbosound_dout),

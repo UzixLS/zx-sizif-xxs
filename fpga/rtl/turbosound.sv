@@ -19,41 +19,50 @@ module turbosound(
 );
 
 
-reg ay_clk;
 reg ay_bdir;
 reg ay_bc1;
 reg ay_sel;
-wire ay_rd0 = ay_bc1 & ~ay_bdir & ~ay_sel;
-wire ay_rd1 = ay_bc1 & ~ay_bdir &  ay_sel;
-wire port_bffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[7:0] == 8'hFD;
-wire port_fffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[7:0] == 8'hFD;
+wire ay_rd0 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b0;
+wire ay_rd1 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b1;
+wire port_bffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[1] == 0;
+wire port_fffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[1] == 0;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
-		ay_clk <= 0;
 		ay_bc1 <= 0;
 		ay_bdir <= 0;
+		ay_sel <= 0;
 	end
 	else begin
-		if (ck35)
-			ay_clk = pause | ~ay_clk;
-		ay_bc1  <= ay_sel && port_fffd;
-		ay_bdir <= ay_sel && port_bffd && bus.wr;
+		ay_bc1  <= en && port_fffd;
+		ay_bdir <= en && port_bffd && bus.wr;
 		if (bus.ioreq && port_fffd && bus.wr && bus.d[7:3] == 5'b11111)
-			ay_sel <= ~bus.d[0];
+			ay_sel <= bus.d[0];
 	end
+end
+
+
+reg [1:0] ay_ck;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n)
+		ay_ck <= 0;
+	else if (ck35 && en && !pause)
+		ay_ck <= ay_ck + 1'b1;
+	else
+		ay_ck[1] <= 0;
 end
 
 
 wire [7:0] ay_dout0, ay_dout1;
 YM2149 ym2149_0(
 	.CLK(clk28),
-	.ENA(en),
+	.ENA(ay_ck[1]),
 	.RESET_H(~rst_n),
 	.I_SEL_L(1'b1),
 	.I_DA(bus.d),
 	.O_DA(ay_dout0),
-	.busctrl_addr(ay_bc1),
-	.busctrl_we(ay_bdir & ~ay_sel),
+	.I_REG(1'b0),
+	.busctrl_addr(ay_bc1 & ay_bdir & ~ay_sel),
+	.busctrl_we(~ay_bc1 & ay_bdir & ~ay_sel),
 	.ctrl_aymode(1'b1),
 	.port_a_i(8'hff),
 	.port_b_i(8'hff),
@@ -63,13 +72,14 @@ YM2149 ym2149_0(
 	);
 YM2149 ym2149_1(
 	.CLK(clk28),
-	.ENA(en),
+	.ENA(ay_ck[1]),
 	.RESET_H(~rst_n),
 	.I_SEL_L(1'b1),
 	.I_DA(bus.d),
 	.O_DA(ay_dout1),
-	.busctrl_addr(ay_bc1),
-	.busctrl_we(ay_bdir & ay_sel),
+	.I_REG(1'b0),
+	.busctrl_addr(ay_bc1 & ay_bdir & ay_sel),
+	.busctrl_we(~ay_bc1 & ay_bdir & ay_sel),
 	.ctrl_aymode(1'b1),
 	.port_a_i(8'hff),
 	.port_b_i(8'hff),
@@ -79,11 +89,8 @@ YM2149 ym2149_1(
 	);
 
 	
-assign d_out_active = en && (ay_rd0 | ay_rd1);
-assign d_out = 
-	ay_rd0? ay_dout0 :
-	ay_rd1? ay_dout1 :
-	8'hFF;
+assign d_out_active = ay_rd0 | ay_rd1;
+assign d_out = ay_rd1? ay_dout1 : ay_dout0;
 
 	
 endmodule
