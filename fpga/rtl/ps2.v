@@ -144,17 +144,20 @@ always @(posedge clk or negedge rst_n) begin
 				`PS2_PGUP:      begin zxkb[0][0] <= is_press; zxkb[3][2] <= is_press; end
 				`PS2_PGDN:      begin zxkb[0][0] <= is_press; zxkb[3][3] <= is_press; end
 
-				`PS2_F5:     key_magic <= is_press;
-				`PS2_F11:    key_pause <= 1'b0;
-				`PS2_F12:    key_pause <= 1'b1;
-				`PS2_DELETE: key_del <= is_press;
+				`PS2_F5:        key_magic <= is_press;
+				`PS2_F11:       key_pause <= 1'b0;
+				`PS2_F12:       key_pause <= 1'b1;
+				`PS2_DELETE:    key_del <= is_press;
 				
-				`PS2_KP_8:   joy_up <= is_press;
-				`PS2_KP_2:   joy_down <= is_press;
-				`PS2_KP_4:   joy_left <= is_press;
-				`PS2_KP_6:   joy_right <= is_press;
-				`PS2_L_ALT:  begin joy_fire <= is_press; key_alt <= is_press; end
-				`PS2_R_ALT:  begin joy_fire <= is_press; key_alt <= is_press; end
+				`PS2_KP_8:      joy_up <= is_press;
+				`PS2_KP_2:      joy_down <= is_press;
+				`PS2_KP_5:      joy_down <= is_press;
+				`PS2_KP_4:      joy_left <= is_press;
+				`PS2_KP_6:      joy_right <= is_press;
+				`PS2_KP_0:      joy_fire <= is_press;
+				`PS2_KP_ENTER:  joy_fire <= is_press;
+				`PS2_L_ALT:     begin joy_fire <= is_press; key_alt <= is_press; end
+				`PS2_R_ALT:     begin joy_fire <= is_press; key_alt <= is_press; end
 			endcase
 			is_press <= rxbyte != 8'hF0;
 			is_ext <= rxbyte == 8'hE0 || (rxbyte == 8'hF0 && is_ext);
