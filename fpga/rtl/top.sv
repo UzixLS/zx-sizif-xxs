@@ -424,7 +424,7 @@ end
 
 
 /* MEMORY INITIALIZER */
-wire rom2ram_clk = clk35;
+wire rom2ram_clk = clk7;
 wire [16:0] rom2ram_ram_address, rom2ram_rom_address;
 wire [7:0] rom2ram_datain, rom2ram_dataout;
 wire rom2ram_rom_rden;
