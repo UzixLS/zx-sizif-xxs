@@ -1,6 +1,6 @@
 package common;
-	typedef enum { TIMINGS_PENT,TIMINGS_S128,TIMINGS_S48 } timings_t;
-	typedef enum { TURBO_NONE, TURBO_7, TURBO_14} turbo_t;
+	typedef enum { TIMINGS_PENT, TIMINGS_S128, TIMINGS_S48 } timings_t;
+	typedef enum { TURBO_NONE, TURBO_7, TURBO_14 = 3 } turbo_t;
 endpackage
 
 
