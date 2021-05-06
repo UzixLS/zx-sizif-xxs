@@ -27,13 +27,13 @@ fpga/**/simulation/
 fpga.*/
 
 ## Testbench
-fpga_tb/ivl_vhdl_work/
-fpga_tb/work/
-fpga_tb/*.gtkw
-fpga_tb/*.vcd
-fpga_tb/*.bin
-fpga_tb/*.mem
-fpga_tb.*/
+fpga/tb/ivl_vhdl_work/
+fpga/tb/work/
+fpga/tb/*.gtkw
+fpga/tb/*.vcd
+fpga/tb/*.bin
+fpga/tb/*.mem
+fpga/tb.*/
 
 ## Etc.
 *.bak

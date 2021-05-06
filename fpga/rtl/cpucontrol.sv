@@ -20,11 +20,11 @@ module cpucontrol(
 	input ext_wait_cycle,
 	input init_done_in,
 
-	output n_rstcpu,
-	output clkcpu,
+	output reg n_rstcpu,
+	output reg clkcpu,
 	output clkcpu_ck,
 	output clkwait,
-	output n_int,
+	output reg n_int,
 	output n_int_next,
 	output snow
 );
@@ -47,7 +47,7 @@ assign snow = (timings != TIMINGS_PENT) && bus.a[14] && ~bus.a[15] && bus.rfsh;
 /* CLOCK */
 logic [2:0] turbo_wait;
 wire turbo_wait_trig0 = bus.rd || bus.wr;
-wire turbo_wait_trig1;
+reg turbo_wait_trig1;
 always @(posedge clk28) begin
 	turbo_wait_trig1 <= turbo_wait_trig0;
 	turbo_wait[0] <= turbo == TURBO_14 && turbo_wait_trig0 && !turbo_wait_trig1;

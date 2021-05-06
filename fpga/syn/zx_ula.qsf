@@ -94,7 +94,7 @@ set_location_assignment PIN_2 -to va[5]
 set_location_assignment PIN_3 -to vd[4]
 set_location_assignment PIN_4 -to va[12]
 set_location_assignment PIN_5 -to va[11]
-set_location_assignment PIN_20 -to ps2_data
+set_location_assignment PIN_20 -to ps2_dat
 set_location_assignment PIN_21 -to ps2_clk
 set_location_assignment PIN_22 -to chroma[0]
 set_location_assignment PIN_23 -to chroma[1]

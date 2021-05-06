@@ -66,6 +66,8 @@ YM2149 ym2149_0(
 	.ctrl_aymode(1'b1),
 	.port_a_i(8'hff),
 	.port_b_i(8'hff),
+	.port_a_o(),
+	.port_b_o(),
 	.O_AUDIO_A(ay_a0),
 	.O_AUDIO_B(ay_b0),
 	.O_AUDIO_C(ay_c0)
@@ -83,6 +85,8 @@ YM2149 ym2149_1(
 	.ctrl_aymode(1'b1),
 	.port_a_i(8'hff),
 	.port_b_i(8'hff),
+	.port_a_o(),
+	.port_b_o(),
 	.O_AUDIO_A(ay_a1),
 	.O_AUDIO_B(ay_b1),
 	.O_AUDIO_C(ay_c1)

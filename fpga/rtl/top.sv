@@ -30,7 +30,7 @@ module zx_ula(
 	output snd_r,
 
 	inout reg ps2_clk,
-	inout reg ps2_data,
+	inout reg ps2_dat,
 
 	input sd_cd,
 	input sd_miso_tape_in,
@@ -51,6 +51,7 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 timings_t timings;
 turbo_t turbo;
 wire clkwait;
+wire screen_read;
 
 reg n_iorq_delayed, a_valid;
 always @(posedge clk28) begin
@@ -58,18 +59,16 @@ always @(posedge clk28) begin
 	a_valid <= screen_read == 0;
 end
 cpu_bus bus();
-always @* begin
-	bus.a = {a[15:13], va[12:0]};
-	bus.d = vd;
-	bus.iorq = ~n_iorq;
-	bus.mreq = ~n_mreq;
-	bus.m1 = ~n_m1;
-	bus.rfsh = ~n_rfsh;
-	bus.rd = ~n_rd;
-	bus.wr = ~n_wr;
-	bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0 && a_valid;
-	bus.a_valid = a_valid;
-end
+assign bus.a = {a[15:13], va[12:0]};
+assign bus.d = vd;
+assign bus.iorq = ~n_iorq;
+assign bus.mreq = ~n_mreq;
+assign bus.m1 = ~n_m1;
+assign bus.rfsh = ~n_rfsh;
+assign bus.rd = ~n_rd;
+assign bus.wr = ~n_wr;
+assign bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0 && a_valid;
+assign bus.a_valid = a_valid;
 
 
 /* KEYBOARD */
@@ -82,7 +81,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
 	.rst_n(rst_n),
 	.clk(clk28),
 	.ps2_clk_in(ps2_clk),
-	.ps2_dat_in(ps2_data),
+	.ps2_dat_in(ps2_dat),
 	.ps2_clk_out(ps2_clk_out),
 	.ps2_dat_out(ps2_dat_out),
 	.zxkb_addr(bus.a[15:8]),
@@ -97,7 +96,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
 	.joy_fire(joy_fire)
 );
 assign ps2_clk = (ps2_clk_out == 0)? 1'b0 : 1'bz;
-assign ps2_data = (ps2_dat_out == 0)? 1'b0 : 1'bz;
+assign ps2_dat = (ps2_dat_out == 0)? 1'b0 : 1'bz;
 
 
 /* SCREEN CONTROLLER */
@@ -110,7 +109,7 @@ reg hsync;
 reg up_en;
 wire [5:0] up_ink_addr, up_paper_addr;
 wire [7:0] up_ink, up_paper;
-wire screen_read, screen_load, screen_read_up;
+wire screen_load, screen_read_up;
 wire [14:0] screen_addr;
 wire [7:0] attr_next;
 wire [8:0] vc, hc;
@@ -130,6 +129,7 @@ screen screen0(
 	.g(g),
 	.b(b),
 	.csync(csync),
+	.vsync(),
 	.hsync(hsync),
 
 	.blink(blink),
@@ -173,6 +173,7 @@ assign chroma[2] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
 
 
 /* CPU CONTROLLER */
+reg [2:0] rampage128;
 wire div_wait;
 wire [7:0] cpucontrol_dout;
 wire cpucontrol_dout_active;
@@ -249,8 +250,7 @@ wire ports_dout_active;
 reg beeper, tape_out;
 reg screenpage;
 reg rompage128;
-reg [2:0] rampage128;
-reg [2:0] rampage_ext;
+reg [3:0] rampage_ext;
 reg [2:0] port_1ffd;
 reg port_dffd_d3;
 reg port_dffd_d4;
@@ -351,6 +351,9 @@ mixer mixer0(
 	.sd_r0(soundrive_r0),
 	.sd_r1(soundrive_r1),
 
+	.ay_abc(ay_abc),
+	.ay_mono(ay_mono),
+
 	.dac_l(snd_l),
 	.dac_r(snd_r)
 );
@@ -443,7 +446,7 @@ rom2ram rom2ram0(
 	.dataout(rom2ram_dataout)
 );
 
-localparam ROM_OFFSET = 24'h00013256;
+localparam ROM_OFFSET = 24'h13256;
 wire [23:0] asmi_addr = ROM_OFFSET + rom2ram_rom_address;
 asmi asmi0(
 	.clkin(rom2ram_clk),

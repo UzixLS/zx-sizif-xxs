@@ -20,6 +20,7 @@ localparam CLKWAIT_TICKS = int'(CLKWAIT_US*CLK_FREQ/1e6) + 1'b1;
 localparam TOUT_US = 100; // must be greater than CLKWAIT_US
 localparam TOUT_TICKS = int'(TOUT_US*CLK_FREQ/1e6) + 1'b1;
 localparam TIMER_WIDTH = $clog2(TOUT_TICKS);
+reg [TIMER_WIDTH-1:0] timer;
 
 
 reg ps2_freeze; // debounce
@@ -43,7 +44,6 @@ always @(posedge clk or negedge rst_n) begin
 end
 
 
-reg [TIMER_WIDTH-1:0] timer;
 reg [3:0] bit_cnt;
 reg [9:0] rxbits;
 assign dataout = rxbits[8:1];

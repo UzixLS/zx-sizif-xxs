@@ -70,7 +70,7 @@ endmodule
 
 
 module ram(q, a, d, we, clk);
-   output[7:0] q;
+   output reg [7:0] q;
    input [7:0] d;
    input [5:0] a;
    input we, clk;
