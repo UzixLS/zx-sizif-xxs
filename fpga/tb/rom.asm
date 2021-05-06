@@ -2,6 +2,7 @@
 
 	ORG #0000
 Start:
+	nop
 	jp Main
 
 	ORG #0038
@@ -25,8 +26,8 @@ Main:
 	ei
 
 	ld bc, #7ffd
-	ld a, #11
-	out (c), a
+	ld a, #83
+	.200 out (c), a
 
 	//.72 nop
 	//ld a, 7
@@ -43,16 +44,28 @@ Main:
 	//otir
 
 	jp #1fff
-
-	ORG #1FF8
-	reti
-	ORG #1FFA
-	retn
-	ORG #1FFF
-	jp #3d00
-
 Loop:
 	halt
 	jp Loop
 
-	SAVEBIN "rom.bin",0,16384
+	ORG #1FF8 // DivROM exit vector
+	reti
+	ORG #1FFA // DivROM exit vector
+	retn
+	ORG #1FFF // DivROM exit vector
+	nop
+	jp #3D00
+
+	ORG #C000 // mapped #0000
+DivROM_Start:
+	nop
+	ld bc, #3D00
+	push bc
+	jp #1FFF
+	ORG #DFFF // mapped #1FFF
+	nop
+	ORG #1D00 // mapped #3D00
+	jp #0000
+
+
+	SAVEBIN "rom.bin",0,65536

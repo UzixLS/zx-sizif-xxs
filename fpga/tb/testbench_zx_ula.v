@@ -103,8 +103,8 @@ zx_ula zx_ula1(
 
 /* MEMORY */
 reg [7:0] ram [0:524288];
-wire [18:0] ram_addr_a = va;
-reg [18:0] ram_addr_a0;
+wire [15:0] ram_addr_a = va;
+reg [15:0] ram_addr_a0;
 wire [7:0] ram_q_a = ram[ram_addr_a0];
 
 always @(posedge clk28) begin
@@ -115,7 +115,7 @@ always @(posedge clk28) begin
 end
 initial begin
     integer i;
-    for (i = 16*1024; i < 524288; i++)
+    for (i = 64*1024; i < 524288; i++)
         ram[i] <= 0;
     $readmemh("rom.mem", ram);
 end
@@ -138,22 +138,22 @@ assign d_cpu_i = vd;
 // assign a_cpu = a_cpu_cpu;
 
 /* CPU SIGNALS (Z84C0020 timings) */
-//assign #400 n_rd = n_rd_cpu; //TdCf(RDf)
-//assign #400 n_wr = n_wr_cpu; //TdCf(WRf)
-//assign #400 n_iorq = n_iorq_cpu; //TdCr(IORQf)
-//assign #400 n_mreq = n_mreq_cpu; //TdCf(MREQf)
-//assign #450 n_m1 = n_m1_cpu; //TdCr(M1f)
-//assign #600 n_rfsh = n_rfsh_cpu; //TdCr(RFSHf)
-//assign #570 a_cpu = a_cpu_cpu; //TdCr(A)
+assign #400 n_rd = n_rd_cpu; //TdCf(RDf)
+assign #400 n_wr = n_wr_cpu; //TdCf(WRf)
+assign #400 n_iorq = n_iorq_cpu; //TdCr(IORQf)
+assign #400 n_mreq = n_mreq_cpu; //TdCf(MREQf)
+assign #450 n_m1 = n_m1_cpu; //TdCr(M1f)
+assign #600 n_rfsh = n_rfsh_cpu; //TdCr(RFSHf)
+assign #570 a_cpu = a_cpu_cpu; //TdCr(A)
 
 /* CPU SIGNALS (Z84C0008 timings) */
-assign #700 n_rd = n_rd_cpu; //TdCf(RDf)
-assign #600 n_wr = n_wr_cpu; //TdCf(WRf)
-assign #550 n_iorq = n_iorq_cpu; //TdCr(IORQf)
-assign #600 n_mreq = n_mreq_cpu; //TdCf(MREQf)
-assign #700 n_m1 = n_m1_cpu; //TdCr(M1f)
-assign #950 n_rfsh = n_rfsh_cpu; //TdCr(RFSHf)
-assign #800 a_cpu = a_cpu_cpu; //TdCr(A)
+// assign #700 n_rd = n_rd_cpu; //TdCf(RDf)
+// assign #600 n_wr = n_wr_cpu; //TdCf(WRf)
+// assign #550 n_iorq = n_iorq_cpu; //TdCr(IORQf)
+// assign #600 n_mreq = n_mreq_cpu; //TdCf(MREQf)
+// assign #700 n_m1 = n_m1_cpu; //TdCr(M1f)
+// assign #950 n_rfsh = n_rfsh_cpu; //TdCr(RFSHf)
+// assign #800 a_cpu = a_cpu_cpu; //TdCr(A)
 
 /* CPU SIGNALS (Z84C0004 timings) */
 // assign #850 n_rd = n_rd_cpu; //TdCf(RDf)
