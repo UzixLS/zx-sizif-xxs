@@ -40,12 +40,12 @@ always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n)
 		port_ff_rd <= 0;
 	else
-		port_ff_rd <= bus.rd && bus.ioreq && (timings != TIMINGS_PENT || bus.a[7:0] == 8'hFF) && screen_loading;
+		port_ff_rd <= bus.rd && bus.ioreq && (timings != TIMINGS_PENT || bus.a_reg[7:0] == 8'hFF) && screen_loading;
 end
 
 
 /* PORT #FE */
-wire port_fe_cs = bus.ioreq && bus.a[0] == 0;
+wire port_fe_cs = bus.ioreq && bus.a_reg[0] == 0;
 reg port_fe_rd;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n)
@@ -63,9 +63,9 @@ always @(posedge clk28 or negedge rst_n) begin
 		border <= 0;
 	end
 	else if (port_fe_cs && bus.wr && clkcpu_ck) begin // clkcpu_ck to synchronize border
-		beeper <= bus.d[4];
-		tape_out <= bus.d[3];
-		border <= bus.d[2:0];
+		beeper <= bus.d_reg[4];
+		tape_out <= bus.d_reg[3];
+		border <= bus.d_reg[2:0];
 	end
 end
 
@@ -75,8 +75,8 @@ always @(posedge clk28 or negedge rst_n) begin
 	end
 	else if (en_sinclair) begin
 		kd0 <= kd
-			& (bus.a[12] == 0? {~kempston_data[1], ~kempston_data[0], ~kempston_data[2], ~kempston_data[3], ~kempston_data[4]} : 5'b11111) // 6-0 keys
-			& (bus.a[15] == 0? {1'b1, ~kempston_data[6], ~kempston_data[5], 2'b11} : 5'b11111 ) ; // b-space keys
+			& (bus.a_reg[12] == 0? {~kempston_data[1], ~kempston_data[0], ~kempston_data[2], ~kempston_data[3], ~kempston_data[4]} : 5'b11111) // 6-0 keys
+			& (bus.a_reg[15] == 0? {1'b1, ~kempston_data[6], ~kempston_data[5], 2'b11} : 5'b11111 ) ; // b-space keys
 	end
 	else begin
 		kd0 <= kd;
@@ -85,7 +85,7 @@ end
 
 
 /* PORT #7FFD */
-wire port_7ffd_cs = en_128k && bus.ioreq && bus.a[1] == 0 && bus.a[15] == 0 && (bus.a[14] == 1'b1 || !en_plus3);
+wire port_7ffd_cs = en_128k && bus.ioreq && bus.a_reg[1] == 0 && bus.a_reg[15] == 0 && (bus.a_reg[14] == 1'b1 || !en_plus3);
 reg lock_7ffd;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
@@ -95,16 +95,16 @@ always @(posedge clk28 or negedge rst_n) begin
 		lock_7ffd <= 0;
 	end
 	else if (port_7ffd_cs && bus.wr && (lock_7ffd == 0 || port_dffd_d4 == 1'b1)) begin
-		rampage128 <= bus.d[2:0];
-		screen_page <= bus.d[3];
-		rompage128 <= bus.d[4];
-		lock_7ffd <= bus.d[5];
+		rampage128 <= bus.d_reg[2:0];
+		screen_page <= bus.d_reg[3];
+		rompage128 <= bus.d_reg[4];
+		lock_7ffd <= bus.d_reg[5];
 	end
 end
 
 
 /* PORT #DFFD */
-wire port_dffd_cs = en_profi && bus.ioreq && bus.a == 16'hDFFD;
+wire port_dffd_cs = en_profi && bus.ioreq && bus.a_reg == 16'hDFFD;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
 		rampage_ext <= 0;
@@ -112,21 +112,21 @@ always @(posedge clk28 or negedge rst_n) begin
 		port_dffd_d4 <= 0;
 	end
 	else if (port_dffd_cs && bus.wr) begin
-		rampage_ext <= bus.d[2:0];
-		port_dffd_d3 <= bus.d[3];
-		port_dffd_d4 <= bus.d[4];
+		rampage_ext <= bus.d_reg[2:0];
+		port_dffd_d3 <= bus.d_reg[3];
+		port_dffd_d4 <= bus.d_reg[4];
 	end
 end
 
 
 /* PORT #1FFD */
-wire port_1ffd_cs = en_plus3 && bus.ioreq && bus.a == 16'h1FFD;
+wire port_1ffd_cs = en_plus3 && bus.ioreq && bus.a_reg == 16'h1FFD;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
 		port_1ffd <= 0;
 	end
 	else if (port_1ffd_cs && bus.wr) begin
-		port_1ffd <= bus.d[2:0];
+		port_1ffd <= bus.d_reg[2:0];
 	end
 end
 
@@ -137,7 +137,7 @@ always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n)
 		kempston_rd <= 0;
 	else
-		kempston_rd <= en_kempston && bus.ioreq && bus.rd && bus.a[7:5] == 3'b000;
+		kempston_rd <= en_kempston && bus.ioreq && bus.rd && bus.a_reg[7:5] == 3'b000;
 end
 
 

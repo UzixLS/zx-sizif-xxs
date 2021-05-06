@@ -5,10 +5,8 @@ module cpucontrol(
 	input clk14,
 	input clk7,
 	input clk35,
-	cpu_bus bus,
 
-	output [7:0] d_out,
-	output d_out_active,
+	cpu_bus bus,
 
 	input [8:0] vc,
 	input [8:0] hc,
@@ -65,9 +63,6 @@ end
 
 
 /* INT GENERATOR */
-wire int_vector_rd = bus.iorq && bus.m1;
-wire [7:0] int_vector_data = 8'hff;
-
 localparam INT_V_S48       = 247;
 localparam INT_H_S48       = 442;
 localparam INT_V_S128      = 247;
@@ -107,9 +102,5 @@ always @(posedge clk28 or negedge rst_n) begin
 		n_rstcpu <= 1'b1;
 end
 
-
-/* BUS CONTROLLER */
-assign d_out = int_vector_data;
-assign d_out_active = int_vector_rd;
 
 endmodule

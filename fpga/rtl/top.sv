@@ -51,14 +51,30 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 timings_t timings;
 turbo_t turbo;
 wire clkwait;
-wire screen_fetch;
+wire screen_fetch, screen_fetch_next;
 
-reg n_iorq_delayed, a_valid;
-always @(posedge clk28) begin
-	n_iorq_delayed <= n_iorq;
-	a_valid <= screen_read == 0;
-end
+
+/* CPU BUS */
 cpu_bus bus();
+reg bus_memreq, bus_ioreq;
+always @(posedge clk28 or negedge rst_n) begin
+	if (!rst_n) begin
+		bus_ioreq <= 0;
+		bus_memreq <= 0;
+	end
+	else if (!screen_fetch && !screen_fetch_next) begin
+		bus.a_reg <= bus.a;
+		bus.d_reg <= bus.d;
+		bus_ioreq <= n_iorq == 1'b0 && n_m1 == 1'b1;
+		bus_memreq <= n_mreq == 1'b0;
+	end
+	else begin
+		if (n_iorq)
+			bus_ioreq <= 0;
+		if (n_mreq)
+			bus_memreq <= 0;
+	end
+end
 assign bus.a = {a[15:13], va[12:0]};
 assign bus.d = vd;
 assign bus.iorq = ~n_iorq;
@@ -67,8 +83,8 @@ assign bus.m1 = ~n_m1;
 assign bus.rfsh = ~n_rfsh;
 assign bus.rd = ~n_rd;
 assign bus.wr = ~n_wr;
-assign bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && a_valid;
-assign bus.a_valid = a_valid;
+assign bus.ioreq = bus_ioreq & ~n_iorq;
+assign bus.memreq = bus_memreq & ~n_mreq;
 
 
 /* KEYBOARD */
@@ -84,7 +100,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
 	.ps2_dat_in(ps2_dat),
 	.ps2_clk_out(ps2_clk_out),
 	.ps2_dat_out(ps2_dat_out),
-	.zxkb_addr(bus.a[15:8]),
+	.zxkb_addr(bus.a_reg[15:8]),
 	.zxkb_data(ps2_kd),
 	.key_magic(key_magic),
 	.key_reset(key_reset),
@@ -134,6 +150,7 @@ screen screen0(
 
 	.blink(blink),
 	.fetch(screen_fetch),
+	.fetch_next(screen_fetch_next),
 	.loading(screen_loading),
 	.attr_next(attr_next),
 
@@ -175,8 +192,6 @@ assign chroma[2] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
 /* CPU CONTROLLER */
 reg [2:0] rampage128;
 wire div_wait;
-wire [7:0] cpucontrol_dout;
-wire cpucontrol_dout_active;
 logic n_int_next;
 wire snow, clkcpu_ck;
 wire init_done;
@@ -188,9 +203,6 @@ cpucontrol cpucontrol0(
 	.clk35(clk35),
 
 	.bus(bus),
-
-	.d_out(cpucontrol_dout),
-	.d_out_active(cpucontrol_dout_active),
 
 	.vc(vc),
 	.hc(hc),
@@ -525,13 +537,14 @@ assign va[18:0] =
 	{ram_a[18:13], {13{1'bz}}};
 
 assign vd[7:0] =
+	~n_vrd? {8{1'bz}} :
 	rom2ram_ram_wren? rom2ram_dataout :
 	up_dout_active? up_dout :
 	div_dout_active? div_dout :
 	turbosound_dout_active? turbosound_dout :
 	ports_dout_active? ports_dout :
-	cpucontrol_dout_active? cpucontrol_dout :
-	{8{1'bz}};
+	~n_wr? {8{1'bz}} :
+	8'hFF;
 
 	
 endmodule

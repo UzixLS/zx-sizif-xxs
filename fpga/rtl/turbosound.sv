@@ -24,8 +24,8 @@ reg ay_bc1;
 reg ay_sel;
 wire ay_rd0 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b0;
 wire ay_rd1 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b1;
-wire port_bffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[1] == 0;
-wire port_fffd = bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[1] == 0;
+wire port_bffd = bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[1] == 0;
+wire port_fffd = bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[14] == 1'b1 && bus.a_reg[1] == 0;
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
 		ay_bc1 <= 0;
@@ -35,8 +35,8 @@ always @(posedge clk28 or negedge rst_n) begin
 	else begin
 		ay_bc1  <= en && port_fffd;
 		ay_bdir <= en && port_bffd && bus.wr;
-		if (bus.ioreq && port_fffd && bus.wr && bus.d[7:3] == 5'b11111)
-			ay_sel <= bus.d[0];
+		if (bus.ioreq && port_fffd && bus.wr && bus.d_reg[7:3] == 5'b11111)
+			ay_sel <= bus.d_reg[0];
 	end
 end
 
@@ -58,7 +58,7 @@ YM2149 ym2149_0(
 	.ENA(ay_ck[1]),
 	.RESET_H(~rst_n),
 	.I_SEL_L(1'b1),
-	.I_DA(bus.d),
+	.I_DA(bus.d_reg),
 	.O_DA(ay_dout0),
 	.I_REG(1'b0),
 	.busctrl_addr(ay_bc1 & ay_bdir & ~ay_sel),
@@ -77,7 +77,7 @@ YM2149 ym2149_1(
 	.ENA(ay_ck[1]),
 	.RESET_H(~rst_n),
 	.I_SEL_L(1'b1),
-	.I_DA(bus.d),
+	.I_DA(bus.d_reg),
 	.O_DA(ay_dout1),
 	.I_REG(1'b0),
 	.busctrl_addr(ay_bc1 & ay_bdir & ay_sel),

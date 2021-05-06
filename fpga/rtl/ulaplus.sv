@@ -15,8 +15,8 @@ module ulaplus(
 );
 
 
-wire port_bf3b_cs = en && bus.ioreq && bus.a == 16'hbf3b;
-wire port_ff3b_cs = en && bus.ioreq && bus.a == 16'hff3b;
+wire port_bf3b_cs = en && bus.ioreq && bus.a_reg == 16'hbf3b;
+wire port_ff3b_cs = en && bus.ioreq && bus.a_reg == 16'hff3b;
 reg port_ff3b_rd;
 wire [7:0] port_ff3b_data = {7'b0000000, active};
 
@@ -32,9 +32,9 @@ always @(posedge clk28 or negedge rst_n) begin
 	end
 	else begin		
 		if (port_bf3b_cs && bus.wr)
-				addr_reg <= bus.d;
+				addr_reg <= bus.d_reg;
 		if (port_ff3b_cs && bus.wr && addr_reg == 8'b01000000)
-				active <= bus.d[0];
+				active <= bus.d_reg[0];
 		
 		write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
 		port_ff3b_rd <= port_ff3b_cs && bus.rd;
@@ -46,7 +46,7 @@ wire write_req0 = write_req[0] && !write_req[1];
 reg read_step;
 wire [5:0] ram_a = write_req0? addr_reg[5:0] : read_step? ink_addr : paper_addr;
 wire [7:0] ram_q;
-ram pallete(ram_q, ram_a, bus.d, write_req0, clk28);
+ram pallete(ram_q, ram_a, bus.d_reg, write_req0, clk28);
 
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n)

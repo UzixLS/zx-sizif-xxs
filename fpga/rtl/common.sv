@@ -14,6 +14,8 @@ interface cpu_bus();
 	wire rd;
 	wire wr;
 
+	reg [15:0] a_reg;
+	reg [7:0] d_reg;
 	wire ioreq;
-	wire a_valid;
+	wire memreq;
 endinterface
