@@ -5,7 +5,7 @@ module screen(
 	input clk28,
 
 	cpu_bus bus,
-	output [14:0] screen_addr,
+	output [14:0] addr,
 
 	input clkwait,
 	input timings_t timings,
@@ -18,10 +18,11 @@ module screen(
 	output reg hsync,
 	output reg csync,
 
-	output read,
 	output blink,
-	output load,
 	output reg [7:0] attr_next,
+	output loading,
+	output reg fetch,
+	output fetch_next,
 	
 	input up_en,
 	output [5:0] up_ink_addr,
@@ -168,22 +169,19 @@ end
 wire [7:0] attr_border = {2'b00, border, 3'b000};
 
 reg [7:0] bitmap, attr, bitmap_next;
-reg screen_read;
-assign read = screen_read;
-reg screen_read_step;
-wire bitmap_read = screen_read && screen_read_step == 1'd1;
-wire attr_read = screen_read && screen_read_step == 1'd0;
-assign screen_addr =  bitmap_read? 
+reg fetch_step;
+wire fetch_bitmap = fetch && fetch_step == 1'd1;
+wire fetch_attr = fetch && fetch_step == 1'd0;
+assign addr =  fetch_bitmap? 
 							{ 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
 							{ 5'b10110, vc[7:3], hc[7:3] };
 
-wire screen_load = (vc < V_AREA) && (hc < H_AREA || hc0_reset);
-assign load = screen_load;
+assign loading = (vc < V_AREA) && (hc < H_AREA || hc0_reset);
 wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 2) && (hc0 < ((H_AREA + SCREEN_DELAY)<<2) - 2);
 wire screen_update = vc < V_AREA && hc <= H_AREA && hc != 0 && hc0[4:0] == 5'b11110;
 wire border_update = !screen_show && ((timings == TIMINGS_PENT && ck7) || hc0[4:0] == 5'b11110);
 wire bitmap_shift = hc0[1:0] == 2'b10;
-wire screen_read_next = screen_load && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
+assign fetch_next = loading && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
 
 reg [7:0] up_ink0, up_paper0;
 assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
@@ -191,8 +189,8 @@ assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
 
 always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n) begin
-		screen_read <= 0;
-		screen_read_step <= 0;
+		fetch <= 0;
+		fetch_step <= 0;
 		attr <= 0;
 		bitmap <= 0;
 		attr_next <= 0;
@@ -200,15 +198,15 @@ always @(posedge clk28 or negedge rst_n) begin
 	end
 	else begin
 		if (ck14) begin
-			if (screen_read)
-				screen_read_step <= screen_read_step + 1'b1;
-			screen_read <= screen_read_next;
+			if (fetch)
+				fetch_step <= fetch_step + 1'b1;
+			fetch <= fetch_next;
 
-			if (attr_read)
+			if (fetch_attr)
 				attr_next <= bus.d;
-			else if (!screen_load)
+			else if (!loading)
 				attr_next <= attr_border;
-			if (bitmap_read)
+			if (fetch_bitmap)
 				bitmap_next <= bus.d;
 		end
 
@@ -224,7 +222,7 @@ always @(posedge clk28 or negedge rst_n) begin
 			
 		if (screen_update)
 			up_ink0 <= up_ink;
-		if (screen_update || (!screen_show && !screen_load))
+		if (screen_update || (!screen_show && !loading))
 			up_paper0 <= up_paper;
 	end
 end

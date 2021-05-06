@@ -14,7 +14,7 @@ module ports(
 
 	input clkcpu_ck,
 	input timings_t timings,
-	input screen_load,
+	input screen_loading,
 	input [7:0] attr_next,
 	input [4:0] kd,
 	input [7:0] kempston_data,
@@ -40,7 +40,7 @@ always @(posedge clk28 or negedge rst_n) begin
 	if (!rst_n)
 		port_ff_rd <= 0;
 	else
-		port_ff_rd <= bus.rd && bus.ioreq && (timings != TIMINGS_PENT || bus.a[7:0] == 8'hFF) && screen_load;
+		port_ff_rd <= bus.rd && bus.ioreq && (timings != TIMINGS_PENT || bus.a[7:0] == 8'hFF) && screen_loading;
 end
 
 

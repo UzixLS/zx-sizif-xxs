@@ -13,7 +13,7 @@ module cpucontrol(
 	input [8:0] vc,
 	input [8:0] hc,
 	input [2:0] rampage128,
-	input screen_load,
+	input screen_loading,
 	input turbo_t turbo,
 	input timings_t timings,
 	input pause,
@@ -39,7 +39,7 @@ always @(posedge clkcpu)
 wire contention_mem_addr = bus.a[14] & (~bus.a[15] | (bus.a[15] & rampage128[0]));
 wire contention_mem = iorq_delayed == 1'b0 && mreq_delayed == 1'b0 && contention_mem_addr;
 wire contention_io = iorq_delayed == 1'b0 && bus.iorq;
-wire contention0 = screen_load && (hc[2] || hc[3]) && (contention_mem || contention_io);
+wire contention0 = screen_loading && (hc[2] || hc[3]) && (contention_mem || contention_io);
 wire contention = clkcpu && contention0 && turbo == TURBO_NONE && timings != TIMINGS_PENT;
 assign snow = (timings != TIMINGS_PENT) && bus.a[14] && ~bus.a[15] && bus.rfsh;
 

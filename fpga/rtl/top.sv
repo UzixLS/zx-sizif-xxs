@@ -51,7 +51,7 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 timings_t timings;
 turbo_t turbo;
 wire clkwait;
-wire screen_read;
+wire screen_fetch;
 
 reg n_iorq_delayed, a_valid;
 always @(posedge clk28) begin
@@ -67,7 +67,7 @@ assign bus.m1 = ~n_m1;
 assign bus.rfsh = ~n_rfsh;
 assign bus.rd = ~n_rd;
 assign bus.wr = ~n_wr;
-assign bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && n_iorq_delayed == 1'b0 && a_valid;
+assign bus.ioreq = n_m1 == 1'b1 && n_iorq == 1'b0 && a_valid;
 assign bus.a_valid = a_valid;
 
 
@@ -109,7 +109,7 @@ reg hsync;
 reg up_en;
 wire [5:0] up_ink_addr, up_paper_addr;
 wire [7:0] up_ink, up_paper;
-wire screen_load, screen_read_up;
+wire screen_loading;
 wire [14:0] screen_addr;
 wire [7:0] attr_next;
 wire [8:0] vc, hc;
@@ -119,7 +119,7 @@ screen screen0(
 	.clk28(clk28),
 
 	.bus(bus),
-	.screen_addr(screen_addr),
+	.addr(screen_addr),
 
 	.clkwait(clkwait),
 	.timings(timings),
@@ -133,8 +133,8 @@ screen screen0(
 	.hsync(hsync),
 
 	.blink(blink),
-	.read(screen_read),
-	.load(screen_load),
+	.fetch(screen_fetch),
+	.loading(screen_loading),
 	.attr_next(attr_next),
 
 	.up_en(up_en),
@@ -195,7 +195,7 @@ cpucontrol cpucontrol0(
 	.vc(vc),
 	.hc(hc),
 	.rampage128(rampage128),
-	.screen_load(screen_load),
+	.screen_loading(screen_loading),
 	.turbo(turbo),
 	.timings(timings),
 	.pause(pause),
@@ -270,7 +270,7 @@ ports ports0 (
 
 	.clkcpu_ck(clkcpu_ck),
 	.timings(timings),
-	.screen_load(screen_load),
+	.screen_loading(screen_loading),
 	.attr_next(attr_next),
 	.kd(ps2_kd),
 	.kempston_data({3'b000, joy_fire, joy_up, joy_down, joy_left, joy_right}),
@@ -477,8 +477,8 @@ always @(posedge clk28 or negedge rst_n) begin
 	end
 end
 
-assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_read) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
-assign n_vwr = ((ramreq_wr && bus.wr && !screen_read) || rom2ram_ram_wren)? 1'b0 : 1'b1;
+assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_fetch) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
+assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b0 : 1'b1;
 
 /* VA[18:13] map
  * 00xxxx 128Kb of roms
@@ -519,8 +519,8 @@ end
 
 assign va[18:0] =
 	rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
-	screen_read && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
-	screen_read? {3'b111, screenpage, screen_addr} :
+	screen_fetch && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
+	screen_fetch? {3'b111, screenpage, screen_addr} :
 	romreq? {2'b00, rom_a[16:14], bus.a[13], {13{1'bz}}} :
 	{ram_a[18:13], {13{1'bz}}};
 
