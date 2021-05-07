@@ -275,7 +275,7 @@ ports ports0 (
 	.d_out_active(ports_dout_active),
 
 	.en_128k(1'b1),
-	.en_plus3(!extlock),
+	.en_plus3(rom_plus3),
 	.en_profi(!extlock),
 	.en_kempston(!joy_sinclair),
 	.en_sinclair(joy_sinclair),
