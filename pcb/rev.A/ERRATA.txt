@@ -1,0 +1,5 @@
+- Incorrect Q1 pinout
+- R7 should be 0 Ohm
+- R14 should be 82 Ohm
+- R19 should be 200 Ohm
+- R20, R22, R25 should be ??? (TODO) Ohm
