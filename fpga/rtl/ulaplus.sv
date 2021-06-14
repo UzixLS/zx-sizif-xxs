@@ -1,17 +1,17 @@
 module ulaplus(
-	input rst_n,
-	input clk28,
-	input en,
-	
-	cpu_bus bus,
-	output [7:0] d_out,
-	output d_out_active,
-	
-	output reg active,
-	input [5:0] ink_addr,
-	input [5:0] paper_addr,
-	output reg [7:0] ink,
-	output reg [7:0] paper
+    input rst_n,
+    input clk28,
+    input en,
+
+    cpu_bus bus,
+    output [7:0] d_out,
+    output d_out_active,
+
+    output reg active,
+    input [5:0] ink_addr,
+    input [5:0] paper_addr,
+    output reg [7:0] ink,
+    output reg [7:0] paper
 );
 
 
@@ -24,21 +24,21 @@ reg [7:0] addr_reg;
 reg [1:0] write_req;
 
 always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n) begin
-		active <= 0;
-		addr_reg <= 0;
-		write_req <= 0;
-		port_ff3b_rd <= 0;
-	end
-	else begin		
-		if (port_bf3b_cs && bus.wr)
-				addr_reg <= bus.d_reg;
-		if (port_ff3b_cs && bus.wr && addr_reg == 8'b01000000)
-				active <= bus.d_reg[0];
-		
-		write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
-		port_ff3b_rd <= port_ff3b_cs && bus.rd;
-	end
+    if (!rst_n) begin
+        active <= 0;
+        addr_reg <= 0;
+        write_req <= 0;
+        port_ff3b_rd <= 0;
+    end
+    else begin
+        if (port_bf3b_cs && bus.wr)
+                addr_reg <= bus.d_reg;
+        if (port_ff3b_cs && bus.wr && addr_reg == 8'b01000000)
+                active <= bus.d_reg[0];
+
+        write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
+        port_ff3b_rd <= port_ff3b_cs && bus.rd;
+    end
 end
 
 
@@ -49,17 +49,17 @@ wire [7:0] ram_q;
 ram pallete(ram_q, ram_a, bus.d_reg, write_req0, clk28);
 
 always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n)
-		read_step <= 0;
-	else
-		read_step <= !read_step;
+    if (!rst_n)
+        read_step <= 0;
+    else
+        read_step <= !read_step;
 end
 
 always @(posedge clk28) begin
-	if (read_step)
-		paper <= ram_q;
-	else
-		ink <= ram_q;
+    if (read_step)
+        paper <= ram_q;
+    else
+        ink <= ram_q;
 end
 
 

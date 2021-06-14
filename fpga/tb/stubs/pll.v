@@ -1,14 +1,14 @@
 `timescale 1 ps / 1 ps
 module pll (
-	inclk0,
-	c0,
-	c1,
-	locked);
+    inclk0,
+    c0,
+    c1,
+    locked);
 
-	input	  inclk0;
-	output	  c0;
-	output	  c1;
-	output reg	  locked;
+    input     inclk0;
+    output    c0;
+    output    c1;
+    output reg    locked;
 
 initial begin
     locked = 0;

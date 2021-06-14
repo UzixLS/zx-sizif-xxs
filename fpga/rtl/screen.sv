@@ -1,43 +1,43 @@
 `include "util.vh"
 import common::*;
 module screen(
-	input rst_n,
-	input clk28,
+    input rst_n,
+    input clk28,
 
-	cpu_bus bus,
-	output [14:0] addr,
+    cpu_bus bus,
+    output [14:0] addr,
 
-	input clkwait,
-	input timings_t timings,
-	input [2:0] border,
+    input clkwait,
+    input timings_t timings,
+    input [2:0] border,
 
-	output reg [2:0] r,
-	output reg [2:0] g,
-	output reg [2:0] b,
-	output reg vsync,
-	output reg hsync,
-	output reg csync,
+    output reg [2:0] r,
+    output reg [2:0] g,
+    output reg [2:0] b,
+    output reg vsync,
+    output reg hsync,
+    output reg csync,
 
-	output blink,
-	output reg [7:0] attr_next,
-	output loading,
-	output reg fetch,
-	output fetch_next,
-	
-	input up_en,
-	output [5:0] up_ink_addr,
-	output [5:0] up_paper_addr,
-	input [7:0] up_ink,
-	input [7:0] up_paper,
+    output blink,
+    output reg [7:0] attr_next,
+    output loading,
+    output reg fetch,
+    output fetch_next,
 
-	output [8:0] hc_out,
-	output [8:0] vc_out,
-	output clk14,
-	output clk7,
-	output clk35,
-	output ck14,
-	output ck7,
-	output ck35
+    input up_en,
+    output [5:0] up_ink_addr,
+    output [5:0] up_paper_addr,
+    input [7:0] up_ink,
+    input [7:0] up_paper,
+
+    output [8:0] hc_out,
+    output [8:0] vc_out,
+    output clk14,
+    output clk7,
+    output clk35,
+    output ck14,
+    output ck7,
+    output ck35
 );
 
 
@@ -92,77 +92,77 @@ assign ck7 = hc0[0] & hc0[1];
 assign ck35 = hc0[0] & hc0[1] & hc0[2];
 
 wire hc0_reset =
-	(timings == TIMINGS_PENT)?
-		hc0 == (H_TOTAL_PENT<<2) - 1'b1 :
-	(timings == TIMINGS_S128)?
-		hc0 == (H_TOTAL_S128<<2) - 1'b1 :
-	// 48K
-		hc0 == (H_TOTAL_S48<<2) - 1'b1 ;
-wire vc_reset = 
-	(timings == TIMINGS_PENT)?
-		vc == V_TOTAL_PENT - 1'b1 :
-	(timings == TIMINGS_S128)?
-		vc == V_TOTAL_S128 - 1'b1 :
-	// 48K
-		vc == V_TOTAL_S48 - 1'b1;
+    (timings == TIMINGS_PENT)?
+        hc0 == (H_TOTAL_PENT<<2) - 1'b1 :
+    (timings == TIMINGS_S128)?
+        hc0 == (H_TOTAL_S128<<2) - 1'b1 :
+    // 48K
+        hc0 == (H_TOTAL_S48<<2) - 1'b1 ;
+wire vc_reset =
+    (timings == TIMINGS_PENT)?
+        vc == V_TOTAL_PENT - 1'b1 :
+    (timings == TIMINGS_S128)?
+        vc == V_TOTAL_S128 - 1'b1 :
+    // 48K
+        vc == V_TOTAL_S48 - 1'b1;
 wire hsync0 =
-	(timings == TIMINGS_PENT)?
-		(hc >= (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT)) &&
-			(hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT)) :
-	(timings == TIMINGS_S128)?
-		(hc >= (H_AREA + H_RBORDER_S128 + H_BLANK1_S128)) &&
-			(hc <  (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128)) :
-	// 48K
-		(hc >= (H_AREA + H_RBORDER_S48 + H_BLANK1_S48)) &&
-			(hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48)) ;
-wire vsync0 = 
-	(timings == TIMINGS_PENT)?
-		(vc >= (V_AREA + V_BBORDER_PENT)) && (vc < (V_AREA + V_BBORDER_PENT + V_SYNC_PENT)) :
-	(timings == TIMINGS_S128)?
-		(vc >= (V_AREA + V_BBORDER_S128)) && (vc < (V_AREA + V_BBORDER_S128 + V_SYNC_S128)) :
-	// 48K
-		(vc >= (V_AREA + V_BBORDER_S48)) && (vc < (V_AREA + V_BBORDER_S48 + V_SYNC_S48)) ;
+    (timings == TIMINGS_PENT)?
+        (hc >= (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT)) &&
+            (hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT)) :
+    (timings == TIMINGS_S128)?
+        (hc >= (H_AREA + H_RBORDER_S128 + H_BLANK1_S128)) &&
+            (hc <  (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128)) :
+    // 48K
+        (hc >= (H_AREA + H_RBORDER_S48 + H_BLANK1_S48)) &&
+            (hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48)) ;
+wire vsync0 =
+    (timings == TIMINGS_PENT)?
+        (vc >= (V_AREA + V_BBORDER_PENT)) && (vc < (V_AREA + V_BBORDER_PENT + V_SYNC_PENT)) :
+    (timings == TIMINGS_S128)?
+        (vc >= (V_AREA + V_BBORDER_S128)) && (vc < (V_AREA + V_BBORDER_S128 + V_SYNC_S128)) :
+    // 48K
+        (vc >= (V_AREA + V_BBORDER_S48)) && (vc < (V_AREA + V_BBORDER_S48 + V_SYNC_S48)) ;
 wire blank =
-	(timings == TIMINGS_PENT)?
-		((vc >= (V_AREA + V_BBORDER_PENT)) && (vc < (V_AREA + V_BBORDER_PENT + V_SYNC_PENT))) ||
-			((hc >= (H_AREA + H_RBORDER_PENT)) &&
-			 (hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT + H_BLANK2_PENT))) :
-	(timings == TIMINGS_S128)?
-		((vc >= (V_AREA + V_BBORDER_S128)) && (vc < (V_AREA + V_BBORDER_S128 + V_SYNC_S128))) ||
-			((hc >= (H_AREA + H_RBORDER_S128)) &&
-			 (hc <  (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128 + H_BLANK2_S128))) :
-	// 48K
-		((vc >= (V_AREA + V_BBORDER_S48)) && (vc < (V_AREA + V_BBORDER_S48 + V_SYNC_S48))) ||
-			((hc >= (H_AREA + H_RBORDER_S48)) &&
-			 (hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48 + H_BLANK2_S48))) ;
+    (timings == TIMINGS_PENT)?
+        ((vc >= (V_AREA + V_BBORDER_PENT)) && (vc < (V_AREA + V_BBORDER_PENT + V_SYNC_PENT))) ||
+            ((hc >= (H_AREA + H_RBORDER_PENT)) &&
+             (hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT + H_BLANK2_PENT))) :
+    (timings == TIMINGS_S128)?
+        ((vc >= (V_AREA + V_BBORDER_S128)) && (vc < (V_AREA + V_BBORDER_S128 + V_SYNC_S128))) ||
+            ((hc >= (H_AREA + H_RBORDER_S128)) &&
+             (hc <  (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128 + H_BLANK2_S128))) :
+    // 48K
+        ((vc >= (V_AREA + V_BBORDER_S48)) && (vc < (V_AREA + V_BBORDER_S48 + V_SYNC_S48))) ||
+            ((hc >= (H_AREA + H_RBORDER_S48)) &&
+             (hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48 + H_BLANK2_S48))) ;
 
 always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n) begin
-		hc0 <= 0;
-		vc <= 0;
-	end
-	else if (hc0_reset) begin
-		hc0 <= 0;
-		if (vc_reset) begin
-			vc <= 0;
-		end
-		else begin
-			vc <= vc + 1'b1;
-		end
-	end
-	else begin
-		hc0 <= hc0 + 1'b1;
-	end
+    if (!rst_n) begin
+        hc0 <= 0;
+        vc <= 0;
+    end
+    else if (hc0_reset) begin
+        hc0 <= 0;
+        if (vc_reset) begin
+            vc <= 0;
+        end
+        else begin
+            vc <= vc + 1'b1;
+        end
+    end
+    else begin
+        hc0 <= hc0 + 1'b1;
+    end
 end
 
 
 reg [4:0] blink_cnt;
 assign blink = blink_cnt[$bits(blink_cnt)-1];
 always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n)
-		blink_cnt <= 0;
-	else if (hc0_reset && vc_reset)
-		blink_cnt <= blink_cnt + 1'b1;
+    if (!rst_n)
+        blink_cnt <= 0;
+    else if (hc0_reset && vc_reset)
+        blink_cnt <= blink_cnt + 1'b1;
 end
 
 
@@ -172,9 +172,9 @@ reg [7:0] bitmap, attr, bitmap_next;
 reg fetch_step;
 wire fetch_bitmap = fetch && fetch_step == 1'd1;
 wire fetch_attr = fetch && fetch_step == 1'd0;
-assign addr =  fetch_bitmap? 
-							{ 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
-							{ 5'b10110, vc[7:3], hc[7:3] };
+assign addr =  fetch_bitmap?
+                            { 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
+                            { 5'b10110, vc[7:3], hc[7:3] };
 
 assign loading = (vc < V_AREA) && (hc < H_AREA || hc0_reset);
 wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 2) && (hc0 < ((H_AREA + SCREEN_DELAY)<<2) - 2);
@@ -188,64 +188,64 @@ assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
 assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
 
 always @(posedge clk28 or negedge rst_n) begin
-	if (!rst_n) begin
-		fetch <= 0;
-		fetch_step <= 0;
-		attr <= 0;
-		bitmap <= 0;
-		attr_next <= 0;
-		bitmap_next <= 0;
-	end
-	else begin
-		if (ck14) begin
-			if (fetch)
-				fetch_step <= fetch_step + 1'b1;
-			fetch <= fetch_next;
+    if (!rst_n) begin
+        fetch <= 0;
+        fetch_step <= 0;
+        attr <= 0;
+        bitmap <= 0;
+        attr_next <= 0;
+        bitmap_next <= 0;
+    end
+    else begin
+        if (ck14) begin
+            if (fetch)
+                fetch_step <= fetch_step + 1'b1;
+            fetch <= fetch_next;
 
-			if (fetch_attr)
-				attr_next <= bus.d;
-			else if (!loading)
-				attr_next <= attr_border;
-			if (fetch_bitmap)
-				bitmap_next <= bus.d;
-		end
+            if (fetch_attr)
+                attr_next <= bus.d;
+            else if (!loading)
+                attr_next <= attr_border;
+            if (fetch_bitmap)
+                bitmap_next <= bus.d;
+        end
 
-		if (border_update)
-			attr <= attr_border;
-		else if (screen_update)
-			attr <= attr_next;
+        if (border_update)
+            attr <= attr_border;
+        else if (screen_update)
+            attr <= attr_next;
 
-		if (screen_update)
-			bitmap <= bitmap_next;
-		else if (bitmap_shift)
-			bitmap <= {bitmap[6:0], 1'b0};
-			
-		if (screen_update)
-			up_ink0 <= up_ink;
-		if (screen_update || (!screen_show && !loading))
-			up_paper0 <= up_paper;
-	end
+        if (screen_update)
+            bitmap <= bitmap_next;
+        else if (bitmap_shift)
+            bitmap <= {bitmap[6:0], 1'b0};
+
+        if (screen_update)
+            up_ink0 <= up_ink;
+        if (screen_update || (!screen_show && !loading))
+            up_paper0 <= up_paper;
+    end
 end
 
 
 wire pixel = bitmap[7];
 always @(posedge clk28) begin
-	if (blank)
-		{g, r, b} = 0;
-	else if (up_en) begin
-		g      = pixel? up_ink0[7:5] : up_paper0[7:5];
-		r      = pixel? up_ink0[4:2] : up_paper0[4:2];
-		b[2:1] = pixel? up_ink0[1:0] : up_paper0[1:0];
-		b[0]   = |b[2:1];
-	end
-	else begin
-		{g[2], r[2], b[2]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
-		{g[1], r[1], b[1]} = ((g[2] | r[2] | b[2]) & attr[6])? 3'b111 : 3'b000;
-		{g[0], r[0], b[0]} = {g[1], r[1], b[1]};
-	end
-	csync = ~(vsync0 ^ hsync0);
-	vsync = ~vsync0;
-	hsync = ~hsync0;
+    if (blank)
+        {g, r, b} = 0;
+    else if (up_en) begin
+        g      = pixel? up_ink0[7:5] : up_paper0[7:5];
+        r      = pixel? up_ink0[4:2] : up_paper0[4:2];
+        b[2:1] = pixel? up_ink0[1:0] : up_paper0[1:0];
+        b[0]   = |b[2:1];
+    end
+    else begin
+        {g[2], r[2], b[2]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
+        {g[1], r[1], b[1]} = ((g[2] | r[2] | b[2]) & attr[6])? 3'b111 : 3'b000;
+        {g[0], r[0], b[0]} = {g[1], r[1], b[1]};
+    end
+    csync = ~(vsync0 ^ hsync0);
+    vsync = ~vsync0;
+    hsync = ~hsync0;
 end
 
 
