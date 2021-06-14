@@ -12,8 +12,8 @@ module ports(
     output [7:0] d_out,
     output d_out_active,
 
-    input clkcpu_ck,
     input timings_t timings,
+    input clkcpu_ck,
     input screen_loading,
     input [7:0] attr_next,
     input [4:0] kd,
@@ -24,7 +24,7 @@ module ports(
     output reg tape_out,
     output reg beeper,
     output reg [2:0] border,
-    output reg screen_page,
+    output reg screenpage,
     output reg rompage128,
     output reg [2:0] rampage128,
     output reg [3:0] rampage_ext,
@@ -32,6 +32,7 @@ module ports(
     output reg port_dffd_d3,
     output reg port_dffd_d4
 );
+
 
 /* PORT #FF */
 wire [7:0] port_ff_data = attr_next;
@@ -90,13 +91,13 @@ reg lock_7ffd;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         rampage128 <= 0;
-        screen_page <= 0;
+        screenpage <= 0;
         rompage128 <= 0;
         lock_7ffd <= 0;
     end
     else if (port_7ffd_cs && bus.wr && (lock_7ffd == 0 || port_dffd_d4 == 1'b1)) begin
         rampage128 <= bus.d_reg[2:0];
-        screen_page <= bus.d_reg[3];
+        screenpage <= bus.d_reg[3];
         rompage128 <= bus.d_reg[4];
         lock_7ffd <= bus.d_reg[5];
     end
@@ -145,7 +146,7 @@ end
 assign d_out_active = port_fe_rd | port_ff_rd | kempston_rd;
 
 assign d_out =
-  kempston_rd? kempston_data :
+    kempston_rd? kempston_data :
     port_fe_rd? port_fe_data :
     port_ff_data ;
 

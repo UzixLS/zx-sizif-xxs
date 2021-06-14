@@ -6,29 +6,28 @@ module magic(
     cpu_bus bus,
     input n_int,
     input n_int_next,
-    output n_nmi,
+    output reg n_nmi,
 
     input magic_button,
 
-    output logic magic_mode,
-    output logic magic_map,
+    output reg magic_mode,
+    output reg magic_map,
     output magic_active_next,
 
-    output logic extlock,
-    output logic magic_beeper,
+    output reg extlock,
+    output reg magic_beeper,
     output timings_t timings,
     output turbo_t turbo,
-    output logic joy_sinclair,
-    output logic rom_plus3,
-    output logic rom_alt48,
-    output logic ay_abc,
-    output logic ay_mono
+    output reg joy_sinclair,
+    output reg rom_plus3,
+    output reg rom_alt48,
+    output reg ay_abc,
+    output reg ay_mono
 );
 
 assign magic_active_next = magic_button;
-logic magic_unmap_next;
-logic magic_map_next;
-assign n_nmi = magic_mode? 1'b0 : 1'b1;
+reg magic_unmap_next;
+reg magic_map_next;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         magic_mode <= 0;
@@ -37,8 +36,11 @@ always @(posedge clk28 or negedge rst_n) begin
         magic_map_next <= 0;
     end
     else begin
-        if (magic_button == 1'b1 && n_int == 1'b1 && n_int_next == 1'b0)
+        if (magic_button == 1'b1 && n_int == 1'b1 && n_int_next == 1'b0) begin
+            if (!magic_mode)
+                n_nmi <= 1'b0;
             magic_mode <= 1'b1;
+        end
 
         if (magic_map && bus.memreq && bus.rd && bus.a_reg == 16'hf000 && !magic_map_next) begin
             magic_unmap_next <= 1'b1;
@@ -53,6 +55,7 @@ always @(posedge clk28 or negedge rst_n) begin
             magic_unmap_next <= 1'b0;
         end
         else if (magic_mode && bus.m1 && bus.memreq && (bus.a_reg == 16'h0066 || magic_map_next)) begin
+            n_nmi <= 1'b1;
             magic_map <= 1'b1;
             magic_map_next <= 1'b0;
         end
@@ -93,5 +96,6 @@ always @(posedge clk28 or negedge rst_n) begin
             joy_sinclair <= bus.d_reg[0];
     end
 end
+
 
 endmodule

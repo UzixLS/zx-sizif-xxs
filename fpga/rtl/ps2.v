@@ -24,9 +24,9 @@ module ps2#(
 );
 
 
-reg rxdone;
-reg rxerr;
-reg [7:0] rxbyte;
+wire rxdone;
+wire rxerr;
+wire [7:0] rxbyte;
 ps2_rxtx #(.CLK_FREQ(CLK_FREQ)) ps2_rxtx0(
     .rst_n(rst_n),
     .clk(clk),

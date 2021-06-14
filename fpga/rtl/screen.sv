@@ -4,10 +4,6 @@ module screen(
     input rst_n,
     input clk28,
 
-    cpu_bus bus,
-    output [14:0] addr,
-
-    input clkwait,
     input timings_t timings,
     input [2:0] border,
 
@@ -18,11 +14,15 @@ module screen(
     output reg hsync,
     output reg csync,
 
-    output blink,
-    output reg [7:0] attr_next,
-    output loading,
+    input fetch_allow,
     output reg fetch,
     output fetch_next,
+    output [14:0] addr,
+    input [7:0] fetch_data,
+
+    output loading,
+    output blink,
+    output reg [7:0] attr_next,
 
     input up_en,
     output [5:0] up_ink_addr,
@@ -40,7 +40,7 @@ module screen(
     output ck35
 );
 
-
+/* SCREEN CONTROLLER */
 localparam H_AREA         = 256;
 localparam V_AREA         = 192;
 localparam SCREEN_DELAY   = 8;
@@ -136,6 +136,7 @@ wire blank =
             ((hc >= (H_AREA + H_RBORDER_S48)) &&
              (hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48 + H_BLANK2_S48))) ;
 
+
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         hc0 <= 0;
@@ -166,26 +167,28 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 
-wire [7:0] attr_border = {2'b00, border, 3'b000};
+wire [7:0] attr_border = {2'b00, border[2:0], 3'b000};
 
 reg [7:0] bitmap, attr, bitmap_next;
 reg fetch_step;
 wire fetch_bitmap = fetch && fetch_step == 1'd1;
 wire fetch_attr = fetch && fetch_step == 1'd0;
-assign addr =  fetch_bitmap?
-                            { 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
-                            { 5'b10110, vc[7:3], hc[7:3] };
+
+assign addr = fetch_bitmap?
+    { 2'b10, vc[7:6], vc[2:0], vc[5:3], hc[7:3] } :
+    { 5'b10110, vc[7:3], hc[7:3] };
+
+reg [7:0] up_ink0, up_paper0;
+assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
+assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
 
 assign loading = (vc < V_AREA) && (hc < H_AREA || hc0_reset);
 wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 2) && (hc0 < ((H_AREA + SCREEN_DELAY)<<2) - 2);
 wire screen_update = vc < V_AREA && hc <= H_AREA && hc != 0 && hc0[4:0] == 5'b11110;
 wire border_update = !screen_show && ((timings == TIMINGS_PENT && ck7) || hc0[4:0] == 5'b11110);
 wire bitmap_shift = hc0[1:0] == 2'b10;
-assign fetch_next = loading && ((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait);
 
-reg [7:0] up_ink0, up_paper0;
-assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
-assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
+assign fetch_next = loading && fetch_allow;
 
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
@@ -203,11 +206,11 @@ always @(posedge clk28 or negedge rst_n) begin
             fetch <= fetch_next;
 
             if (fetch_attr)
-                attr_next <= bus.d;
+                attr_next <= fetch_data;
             else if (!loading)
                 attr_next <= attr_border;
             if (fetch_bitmap)
-                bitmap_next <= bus.d;
+                bitmap_next <= fetch_data;
         end
 
         if (border_update)
@@ -228,6 +231,7 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 
+/* RGBS generation */
 wire pixel = bitmap[7];
 always @(posedge clk28) begin
     if (blank)

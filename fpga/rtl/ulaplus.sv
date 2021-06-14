@@ -1,3 +1,4 @@
+import common::*;
 module ulaplus(
     input rst_n,
     input clk28,
@@ -38,6 +39,9 @@ always @(posedge clk28 or negedge rst_n) begin
 
         write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
         port_ff3b_rd <= port_ff3b_cs && bus.rd;
+
+        if (!en)
+            active <= 0;
     end
 end
 
@@ -46,7 +50,7 @@ wire write_req0 = write_req[0] && !write_req[1];
 reg read_step;
 wire [5:0] ram_a = write_req0? addr_reg[5:0] : read_step? ink_addr : paper_addr;
 wire [7:0] ram_q;
-ram pallete(ram_q, ram_a, bus.d_reg, write_req0, clk28);
+ulaplus_ram pallete(ram_q, ram_a, bus.d_reg, write_req0, clk28);
 
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
@@ -69,7 +73,7 @@ assign d_out_active = port_ff3b_rd;
 endmodule
 
 
-module ram(q, a, d, we, clk);
+module ulaplus_ram(q, a, d, we, clk);
    output reg [7:0] q;
    input [7:0] d;
    input [5:0] a;

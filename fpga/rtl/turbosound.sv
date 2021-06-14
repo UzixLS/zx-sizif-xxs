@@ -1,3 +1,4 @@
+import common::*;
 module turbosound(
     input rst_n,
     input clk28,

@@ -1,3 +1,4 @@
+import common::*;
 module soundrive(
     input rst_n,
     input clk28,

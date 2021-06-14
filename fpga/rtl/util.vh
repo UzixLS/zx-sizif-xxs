@@ -29,7 +29,7 @@
 ((N)&'h800 ?12:((N)&'h400 ?11:((N)&'h200 ?10:((N)&'h100 ?9: \
 ((N)&'h80 ?8:((N)&'h40 ?7:((N)&'h20 ?6:((N)&'h10 ?5: \
 ((N)&'h8 ?4:((N)&'h4 ?3:((N)&'h2 ?2: \
-((N)&'h1))))))))))))))))))))))))))))))))    //"Core Ceil(LOG2(N+1))" for correctly defined 
+((N)&'h1))))))))))))))))))))))))))))))))    //"Core Ceil(LOG2(N+1))" for correctly defined
                 //values (<= 32 bits). Both for synthesis and not; bit selection is not
                 //used since N could be an expression.
 
@@ -73,12 +73,12 @@
 `define ISHEXDX(L) (`ISHEXD(L) || \
                 `ISDEF(L) && ((L) == "X" || (L) == "x"))    //IS byte a HEX Digit or X/x.
 
-`define IS_DEC_INT_DIG(L)  ((L) >= "0" && (L) <= "9")          //Is a byte a valid decimal 
+`define IS_DEC_INT_DIG(L)  ((L) >= "0" && (L) <= "9")          //Is a byte a valid decimal
                 //integer digit.
 
 `define HEXD2DEC(L)  (!`ISHEXD(L) ? \
                         0 : \
                         ((L) >= "a" ? (L) - "a" + 10 : \
                                      ((L) >= "A"  ? (L) - "A" + 10 : \
-                                                    (L) - "0")))            //Convert 
+                                                    (L) - "0")))            //Convert
                 //HEXadecimal Digit to decimal number, on all incorrect inputs returns 0.

@@ -29,7 +29,7 @@ module cpucontrol(
 
 
 /* CONTENTION */
-logic mreq_delayed, iorq_delayed;
+reg mreq_delayed, iorq_delayed;
 always @(posedge clkcpu)
     mreq_delayed <= bus.mreq;
 always @(posedge clkcpu)
@@ -43,7 +43,7 @@ assign snow = (timings != TIMINGS_PENT) && bus.a[14] && ~bus.a[15] && bus.rfsh;
 
 
 /* CLOCK */
-logic [2:0] turbo_wait;
+reg [2:0] turbo_wait;
 wire turbo_wait_trig0 = bus.rd || bus.wr;
 reg turbo_wait_trig1;
 always @(posedge clk28) begin
@@ -53,7 +53,7 @@ always @(posedge clk28) begin
     turbo_wait[2] <= turbo_wait[1];
 end
 
-logic clkcpu_prev;
+reg clkcpu_prev;
 assign clkcpu_ck = clkcpu && ! clkcpu_prev;
 assign clkwait = pause || contention || (|turbo_wait);
 always @(negedge clk28) begin
@@ -76,7 +76,7 @@ wire int_begin =
         vc == INT_V_S128 && hc == INT_H_S128 :
     // 48K
         vc == INT_V_S48 && hc == INT_H_S48 ;
-logic [4:0] int_cnt;
+reg [4:0] int_cnt;
 assign n_int_next = (|int_cnt)? 1'b0 : 1'b1;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin

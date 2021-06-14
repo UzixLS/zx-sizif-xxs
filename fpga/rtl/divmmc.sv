@@ -1,22 +1,22 @@
+import common::*;
 module divmmc(
     input rst_n,
     input clk28,
     input ck14,
     input ck7,
     input en,
+    input en_hooks,
 
     cpu_bus bus,
     output [7:0] d_out,
     output d_out_active,
 
-    input sd_cd,
     input sd_miso,
     output sd_mosi,
     output reg sd_sck,
     output reg sd_cs,
 
-    input port_dffd_d4,
-    input port_1ffd_d0,
+    input rammap,
     input magic_mode,
     input magic_map,
 
@@ -34,7 +34,7 @@ always @(posedge clk28 or negedge rst_n) begin
         div_automap <= 0;
     end
     else if (bus.m1 && bus.memreq && magic_map == 0) begin
-        if (sd_cd || !en || port_dffd_d4 || port_1ffd_d0) begin
+        if (!en_hooks || !en || rammap) begin
             div_automap_next <= 0;
         end
         else if (bus.a_reg[15:3] == 13'h3FF) begin // exit vectors 1FF8-1FFF
