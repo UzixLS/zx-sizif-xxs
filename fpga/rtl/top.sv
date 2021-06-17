@@ -350,7 +350,7 @@ mixer mixer0(
     .rst_n(rst_n),
     .clk28(clk28),
 
-    .beeper(beeper),
+    .beeper(beeper ^ magic_beeper),
     .tape_out(tape_out),
     .tape_in(sd_miso_tape_in),
     .ay_a0(ay_a0),
