@@ -33,9 +33,9 @@ always @(posedge clk28 or negedge rst_n) begin
     end
     else begin
         if (port_bf3b_cs && bus.wr)
-                addr_reg <= bus.d_reg;
+            addr_reg <= bus.d_reg;
         if (port_ff3b_cs && bus.wr && addr_reg == 8'b01000000)
-                active <= bus.d_reg[0];
+            active <= bus.d_reg[0];
 
         write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
         port_ff3b_rd <= port_ff3b_cs && bus.rd;
@@ -74,14 +74,14 @@ endmodule
 
 
 module ulaplus_ram(q, a, d, we, clk);
-   output reg [7:0] q;
-   input [7:0] d;
-   input [5:0] a;
-   input we, clk;
-   reg [7:0] mem [0:63];
+    output reg [7:0] q;
+    input [7:0] d;
+    input [5:0] a;
+    input we, clk;
+    reg [7:0] mem [0:63];
     always @(posedge clk) begin
         if (we)
             mem[a] <= d;
         q <= mem[a];
-   end
+    end
 endmodule
