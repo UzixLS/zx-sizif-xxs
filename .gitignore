@@ -42,4 +42,7 @@ fpga/tb.*/
 rom/sizif*.rom
 rom/sizif*.hex
 rom_src/*.bin
+rom_src/*.hex
+rom_src/*.map
+rom_src/*.sna
 rom_src.*/
