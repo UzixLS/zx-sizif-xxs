@@ -50,10 +50,11 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 /* SHARED DEFINITIONS */
 timings_t timings;
 turbo_t turbo;
+rammode_t ram_mode;
 wire ps2_key_pause, ps2_key_reset;
 wire pause = ps2_key_pause;
 wire [2:0] border;
-wire magic_beeper;
+wire magic_reboot, magic_beeper;
 wire up_en;
 wire clkwait;
 wire [2:0] rampage128;
@@ -98,7 +99,7 @@ assign bus.memreq = bus_memreq & ~n_mreq;
 /* RESET */
 reg usrrst_n = 0;
 always @(posedge clk28)
-    usrrst_n <= (!rst_n || ps2_key_reset)? 1'b0 : 1'b1;
+    usrrst_n <= (!rst_n || ps2_key_reset || magic_reboot)? 1'b0 : 1'b1;
 
 
 
@@ -228,8 +229,7 @@ cpucontrol cpucontrol0(
 
 /* MAGIC */
 wire magic_mode, magic_map;
-wire magic_active_next;
-wire extlock, joy_sinclair, rom_plus3, rom_alt48, ay_abc, ay_mono;
+wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, ay_abc, ay_mono;
 magic magic0(
     .rst_n(usrrst_n),
     .clk28(clk28),
@@ -243,17 +243,18 @@ magic magic0(
 
     .magic_mode(magic_mode),
     .magic_map(magic_map),
-    .magic_active_next(magic_active_next),
 
-    .extlock(extlock),
+    .magic_reboot(magic_reboot),
     .magic_beeper(magic_beeper),
     .timings(timings),
     .turbo(turbo),
+    .ram_mode(ram_mode),
     .joy_sinclair(joy_sinclair),
     .rom_plus3(rom_plus3),
     .rom_alt48(rom_alt48),
     .ay_abc(ay_abc),
-    .ay_mono(ay_mono)
+    .ay_mono(ay_mono),
+    .divmmc_en(divmmc_en)
 );
 
 
@@ -275,9 +276,9 @@ ports ports0 (
     .d_out(ports_dout),
     .d_out_active(ports_dout_active),
 
-    .en_128k(1'b1),
+    .en_128k(ram_mode == RAM_512 || ram_mode == RAM_128),
     .en_plus3(rom_plus3),
-    .en_profi(!extlock),
+    .en_profi(ram_mode == RAM_512),
     .en_kempston(!joy_sinclair),
     .en_sinclair(joy_sinclair),
 
@@ -287,7 +288,7 @@ ports ports0 (
     .attr_next(attr_next),
     .kd(ps2_kd),
     .kempston_data({3'b000, ps2_joy_fire, ps2_joy_up, ps2_joy_down, ps2_joy_left, ps2_joy_right}),
-    .magic_active_next(magic_active_next),
+    .magic_button(ps2_key_magic),
     .tape_in(sd_miso_tape_in),
 
     .tape_out(tape_out),
@@ -333,8 +334,8 @@ wire [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
 soundrive soundrive0(
     .rst_n(usrrst_n),
     .clk28(clk28),
-    .en_covox(!extlock),
-    .en_soundrive(!extlock),
+    .en_covox(1'b1),
+    .en_soundrive(1'b1),
 
     .bus(bus),
 
@@ -382,7 +383,7 @@ divmmc divmmc0(
     .clk28(clk28),
     .ck14(ck14),
     .ck7(ck7),
-    .en(!extlock),
+    .en(divmmc_en),
     .en_hooks(~sd_cd),
 
     .bus(bus),
@@ -414,8 +415,8 @@ wire [7:0] up_dout;
 ulaplus ulaplus0(
     .rst_n(usrrst_n),
     .clk28(clk28),
-    .en(!extlock),
-
+    .en(1'b1),
+    
     .bus(bus),
     .d_out(up_dout),
     .d_out_active(up_dout_active),
