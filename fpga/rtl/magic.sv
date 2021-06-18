@@ -21,7 +21,7 @@ module magic(
     output reg joy_sinclair,
     output reg rom_plus3,
     output reg rom_alt48,
-    output reg mix_abc,
+    output reg mix_acb,
     output reg mix_mono,
     output reg divmmc_en
 );
@@ -72,7 +72,7 @@ always @(posedge clk28 or negedge rst_n) begin
         magic_beeper <= 0;
         timings <= TIMINGS_PENT;
         turbo <= TURBO_NONE;
-        mix_abc <= 1'b1;
+        mix_acb <= 0;
         mix_mono <= 0;
         ram_mode <= RAM_512;
         rom_plus3 <= 0;
@@ -85,7 +85,7 @@ always @(posedge clk28 or negedge rst_n) begin
         8'h01: magic_beeper <= bus.d_reg[0];
         8'h02: timings <= timings_t'(bus.d_reg[1:0]);
         8'h03: turbo <= turbo_t'(bus.d_reg[1:0]);
-        8'h04: {mix_mono, mix_abc} <= bus.d_reg[1:0];
+        8'h04: {mix_mono, mix_acb} <= bus.d_reg[1:0];
         8'h05: rom_plus3 <= bus.d_reg[0];
         8'h06: rom_alt48 <= bus.d_reg[0];
         8'h07: joy_sinclair <= bus.d_reg[0];

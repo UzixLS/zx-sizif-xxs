@@ -43,8 +43,8 @@ menu_panning_value_cb:
     ld a, (cfg.panning)
     jp menu_value_get
 .values_table:
-    DW str_panning_acb_end-2
     DW str_panning_abc_end-2
+    DW str_panning_acb_end-2
     DW str_panning_mono_end-2
 
 menu_joystick_value_cb:

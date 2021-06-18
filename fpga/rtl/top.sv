@@ -229,7 +229,7 @@ cpucontrol cpucontrol0(
 
 /* MAGIC */
 wire magic_mode, magic_map;
-wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, mix_abc, mix_mono;
+wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, mix_acb, mix_mono;
 magic magic0(
     .rst_n(usrrst_n),
     .clk28(clk28),
@@ -252,7 +252,7 @@ magic magic0(
     .joy_sinclair(joy_sinclair),
     .rom_plus3(rom_plus3),
     .rom_alt48(rom_alt48),
-    .mix_abc(mix_abc),
+    .mix_acb(mix_acb),
     .mix_mono(mix_mono),
     .divmmc_en(divmmc_en)
 );
@@ -365,7 +365,7 @@ mixer mixer0(
     .sd_r0(soundrive_r0),
     .sd_r1(soundrive_r1),
 
-    .ay_abc(mix_abc),
+    .ay_acb(mix_acb),
     .mono(mix_mono),
 
     .dac_l(snd_l),
