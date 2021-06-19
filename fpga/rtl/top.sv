@@ -51,8 +51,8 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 timings_t timings;
 turbo_t turbo;
 rammode_t ram_mode;
+reg pause = 0;
 wire ps2_key_pause, ps2_key_reset;
-wire pause = ps2_key_pause;
 wire [2:0] border;
 wire magic_reboot, magic_beeper;
 wire up_en;
@@ -98,9 +98,15 @@ assign bus.memreq = bus_memreq & ~n_mreq;
 
 /* RESET */
 reg usrrst_n = 0;
-always @(posedge clk28)
+always @(posedge clk28) begin
     usrrst_n <= (!rst_n || ps2_key_reset || magic_reboot)? 1'b0 : 1'b1;
+end
 
+/* PAUSE */
+always @(posedge clk28) begin
+    if (n_int == 1'b0 && bus.rfsh)
+        pause <= ps2_key_pause;
+end
 
 
 /* SCREEN CONTROLLER */
