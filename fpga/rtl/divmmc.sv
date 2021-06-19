@@ -41,7 +41,7 @@ always @(posedge clk28 or negedge rst_n) begin
             div_automap_next <= 0;
         end
         else if (
-                (bus.a == 16'h0000 && !magic_mode) || // power-on/reset/rst0/software restart
+                bus.a_reg == 16'h0000 || // power-on/reset/rst0/software restart
                 bus.a_reg == 16'h0008 || // syntax error
                 bus.a_reg == 16'h0038 || // im1 interrupt/rst #38
                 (bus.a_reg == 16'h0066 && !magic_mode) || // nmi routine
