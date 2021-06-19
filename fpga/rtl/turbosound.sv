@@ -4,6 +4,7 @@ module turbosound(
     input clk28,
     input ck35,
     input en,
+    input en_ts,
 
     cpu_bus bus,
     output [7:0] d_out,
@@ -36,7 +37,9 @@ always @(posedge clk28 or negedge rst_n) begin
     else begin
         ay_bc1  <= en && port_fffd;
         ay_bdir <= en && port_bffd && bus.wr;
-        if (bus.ioreq && port_fffd && bus.wr && bus.d_reg[7:3] == 5'b11111)
+        if (!en_ts)
+            ay_sel <= 0;
+        else if (bus.ioreq && port_fffd && bus.wr && bus.d_reg[7:3] == 5'b11111)
             ay_sel <= bus.d_reg[0];
     end
 end
@@ -76,7 +79,7 @@ YM2149 ym2149_0(
 YM2149 ym2149_1(
     .CLK(clk28),
     .ENA(ay_ck[1]),
-    .RESET_H(~rst_n),
+    .RESET_H(~rst_n || !en_ts),
     .I_SEL_L(1'b1),
     .I_DA(bus.d_reg),
     .O_DA(ay_dout1),

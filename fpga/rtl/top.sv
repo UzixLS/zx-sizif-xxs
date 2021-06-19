@@ -313,6 +313,7 @@ turbosound turbosound0(
     .clk28(clk28),
     .ck35(ck35),
     .en(1'b1),
+    .en_ts(1'b1),
 
     .bus(bus),
     .d_out(turbosound_dout),
