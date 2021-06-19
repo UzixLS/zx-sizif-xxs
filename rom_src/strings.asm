@@ -10,11 +10,14 @@ str_sizif: DB "SIZIF-512",0
 str_sizif_end:
     ENDIF
 
-str_save: DB "Save & reset",0
-str_save_end:
-
 str_exit: DB "Exit",0
 str_exit_end:
+
+str_exit_reboot: DB "& reboot     ",0
+str_exit_reboot_end:
+
+str_exit_no_reboot: DB "             ",0
+str_exit_no_reboot_end:
 
 str_on: DB " ON",0
 str_on_end:

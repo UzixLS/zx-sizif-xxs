@@ -35,7 +35,7 @@ startup_handler:
     ld (ix+1), #F6  ; y
     ld (ix+2), #E4  ; g
     ld (ix+3), #C9  ; b
-    call init_variables
+    call init_config
     call init_cpld
     ld hl, 0
     jp exit_with_jp
@@ -88,7 +88,7 @@ exit_with_ret:
     jp Exit_vector-1
 
 
-init_variables:
+init_config:
     ld hl, cfg_initialized     ; if (cfg_initialized == "magic word") {restore cfg} else {default cfg}
     ld a, #B1                  ; ...
     cpi                        ; ... hl++
@@ -120,7 +120,7 @@ init_variables:
     ld (cfg_initialized+2), hl ; ...
     ret
 
-save_variables:
+save_config:
     ld bc, CFG_T     ; cfg_saved = cfg
     ld de, cfg_saved ; ...
     ld hl, cfg       ; ... 
@@ -298,6 +298,7 @@ main:
 
     xor a
     ld (var_exit_flag), a
+    ld (var_exit_reboot), a
     ld (var_input_key), a
     ld (var_input_key_last), a
     ld (var_input_key_hold_timer), a
@@ -328,7 +329,15 @@ main:
     jr nz, .wait_for_keys_release
 
 .leave:
+    call save_config
     call restore
+    ld a, (var_exit_reboot) ; should we reboot?
+    or a                    ; ...
+    jr z, .leave_without_reboot ; ...
+    ld a, 1                 ; reboot
+    ld bc, #00ff            ; ...
+    out (c), a              ; ...
+.leave_without_reboot:
     pop af               ; A = I
     push af              ; 
     call get_im2_handler ; HL = default im2 handler address
@@ -374,6 +383,7 @@ var_int_vector: DW 0
 var_magic_enter_cnt: DB 0
 var_magic_leave_cnt: DB 0
 var_exit_flag: DB 0
+var_exit_reboot: DB 0
 var_input_key: DB 0
 var_input_key_last: DB 0
 var_input_key_hold_timer: DB 0

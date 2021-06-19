@@ -14,8 +14,7 @@ menu:
     MENU_T str_rom48       menu_rom48_value_cb       menu_rom48_cb
     MENU_T str_plus3       menu_plus3_value_cb       menu_plus3_cb
     MENU_T str_divmmc      menu_divmmc_value_cb      menu_divmmc_cb
-    MENU_T str_save        0                         menu_save_reboot_cb
-    MENU_T str_exit        0                         menu_exit_cb
+    MENU_T str_exit        menu_exit_value_cb        menu_exit_cb
     MENU_T 0
 MENU_ITEMS EQU ($-menu)/MENU_T-1
 
@@ -99,6 +98,14 @@ menu_divmmc_value_cb:
     DW str_off_end-2
     DW str_on_end-2
 
+menu_exit_value_cb:
+    ld ix, .values_table
+    ld a, (var_exit_reboot)
+    jp menu_value_get
+.values_table:
+    DW str_exit_no_reboot_end-2
+    DW str_exit_reboot_end-2
+
 menu_value_get:
     sla a
     ld c, a
@@ -181,14 +188,15 @@ menu_divmmc_cb:
     out (c), a
     ret
 
-menu_save_reboot_cb:
-    call save_variables
-    ld a, 1
-    ld bc, #00ff
-    out (c), a
-    ret 
-
 menu_exit_cb:
+    bit 4, d                ; action?
+    jr nz, .exit
+    ld a, (var_exit_reboot)
+    ld c, 1
+    call menu_handle_press
+    ld (var_exit_reboot), a
+    ret
+.exit
     ld a, 1
     ld (var_exit_flag), a
     ret
@@ -223,13 +231,3 @@ menu_handle_press:
     ld a, c                 ; value = max
     ret
 
-
-;var_initialized: DB #B1, #5B, #00, #B5
-;var_timings: DB 0
-;var_clock: DB 0
-;var_panning: DB 1
-;var_joystick: DB 0
-;var_ram: DB 0
-;var_rom48: DB 0
-;var_plus3: DB 0
-;var_divmmc: DB 0

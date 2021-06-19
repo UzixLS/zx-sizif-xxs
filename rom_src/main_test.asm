@@ -49,6 +49,7 @@ includes:
 
 variables:
 var_exit_flag: DB 0
+var_exit_reboot: DB 0
 var_input_key: DB 0
 var_input_key_last: DB 0
 var_input_key_hold_timer: DB 0
