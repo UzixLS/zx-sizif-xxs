@@ -5,6 +5,9 @@ MENU_HOLDCHECK_DELAY    EQU 7
 MENU_WIDTH              EQU 20
 MENU_HEIGHT             EQU MENU_ITEMS+2
 
+MENU_X                  EQU (32-MENU_WIDTH)/2
+MENU_Y                  EQU (24-MENU_HEIGHT)/2
+
 MENU_HEADER_ATTR        EQU #47
 MENU_BODY_ATTR          EQU #78
 MENU_SELECT_ATTR        EQU #68

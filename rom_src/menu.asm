@@ -1,17 +1,17 @@
 menu_init:
-    ld b, (24/2)-(MENU_HEIGHT/2)
-    ld c, (32/2)-(MENU_WIDTH/2)
+    ld b, MENU_Y
+    ld c, MENU_X
     ld d, MENU_HEIGHT
     ld e, MENU_WIDTH
     call draw_box
 
     ld hl, str_sizif
-    ld b, ((24/2)-(MENU_HEIGHT/2))*8
-    ld c, (32/2)-(MENU_WIDTH/2)
+    ld b, MENU_Y*8
+    ld c, MENU_X
     call print_string
 
-    ld b, ((24/2)-(MENU_HEIGHT/2))*8
-    ld c, (32/2)-(MENU_WIDTH/2)+MENU_WIDTH-6
+    ld b, MENU_Y*8
+    ld c, MENU_X+MENU_WIDTH-6
     ld e, 0
     call draw_logo
 
@@ -49,9 +49,9 @@ menu_animate_logo:
     ld a, 4                       ; ...
     sub e                         ; ...
     ld e, a                       ; ...
-    ld b, ((24/2)-(MENU_HEIGHT/2))*8         ; draw logo
-    ld c, (32/2)-(MENU_WIDTH/2)+MENU_WIDTH-6 ; ...
-    call draw_logo                           ; ...
+    ld b, MENU_Y*8                ; draw logo
+    ld c, MENU_X+MENU_WIDTH-6     ; ...
+    call draw_logo                ; ...
 .return:
     ; ret                         ; pass to menu_handle_updown
 
@@ -134,10 +134,10 @@ menu_handle_action_left_right:
 ; OUT - HL - garbage
 menu_draw_selected_item:
     push af
-    ld b, (24/2)-(MENU_HEIGHT/2)+1
+    ld b, MENU_Y+1
     add b
     ld b, a
-    ld c, (32/2)-(MENU_WIDTH/2)
+    ld c, MENU_X
     ld e, MENU_WIDTH
     call draw_menu_item_line
     pop af
@@ -145,8 +145,8 @@ menu_draw_selected_item:
 
 
 menu_draw_menu:
-    ld b, ((24/2)-(MENU_HEIGHT/2))*8+8
-    ld c, (32/2)-(MENU_WIDTH/2)+1
+    ld b, MENU_Y*8+8
+    ld c, MENU_X+1
     ld e, MENU_WIDTH
     ld hl, menu
     call draw_menu
