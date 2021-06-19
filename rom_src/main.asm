@@ -211,26 +211,11 @@ get_im2_handler:
 
 save:
 .save_ay:
-    ld hl, var_save_ay ;
-    ld e, #fe          ; select first AY chip in TurboSound
-.save_ay0:             ; ...
-    ld bc, #fffd       ; ...
-    out (c), e         ; ...
-    ld d, 16           ; register_number=16
-.save_ay1:
-    dec d              ; register_number--
-    ld b, #ff          ; select register number
-    out (c), d         ; ...
-    in a, (c)          ; read register
-    ld (hl), a         ; save to ram
-    ld b, #bf          ; set register to 0
-    xor a              ; ...
-    out (c), a         ; ...
-    inc hl             ; ram++
-    or d               ; register_number == 0?
-    jr nz, .save_ay1
-    inc e              ; next ay chip
-    jr nz, .save_ay0   ; is there more chips?
+    ld hl, var_save_ay ; select first AY chip in TurboSound
+    ld a, #ff          ; ...
+    call .save_ay_sub
+    ld a, #fe          ; select second AY chip in TurboSound
+    call .save_ay_sub
 .save_screen:
     ld bc, 6912
     ld de, var_save_screen
@@ -245,6 +230,24 @@ save:
     ld (var_save_ulaplus), a ; ...
     xor a              ; disable ulaplus
     out (c), a         ; ...
+    ret
+
+.save_ay_sub:
+    ld bc, #fffd       ; ...
+    out (c), a         ; ...
+    ld d, 16           ; register_number=16
+.save_ay_sub_loop:
+    dec d              ; register_number--
+    ld b, #ff          ; select register number
+    out (c), d         ; ...
+    in a, (c)          ; read register
+    ld (hl), a         ; save to ram
+    xor a              ; set register to 0
+    ld b, #bf          ; ...
+    out (c), a         ; ...
+    inc hl             ; ram++
+    or d               ; register_number == 0?
+    jr nz, .save_ay_sub_loop
     ret
 
 
@@ -262,13 +265,20 @@ restore:
     ld hl, var_save_screen
     ldir
 .restore_ay:
-    ld hl, var_save_ay ;
-    ld e, #fe          ; select first AY chip in TurboSound
-.restore_ay0:          ; ...
+    ld hl, var_save_ay+16 ; select second AY chip in TurboSound
+    ld a, #fe          ; ...
+    call .restore_ay_sub
+    ld hl, var_save_ay ; select first AY chip in TurboSound
+    ld a, #ff          ; ...
+    call .restore_ay_sub
+.restore_ret:
+    ret
+
+.restore_ay_sub:
     ld bc, #fffd       ; ...
-    out (c), e         ; ...
+    out (c), a         ; ...
     ld d, 16           ; register_number=16
-.restore_ay1:
+.restore_ay_sub_loop:
     dec d              ; register_number--
     ld b, #ff          ; select register number
     out (c), d         ; ...
@@ -278,10 +288,7 @@ restore:
     inc hl             ; ram++
     xor a              ; register_number == 0?
     or d               ; ...
-    jr nz, .restore_ay1 ;
-    inc e               ; next ay chip
-    jr nz, .restore_ay0 ; is there more chips?
-.restore_ret:
+    jr nz, .restore_ay_sub_loop ;
     ret
 
 
