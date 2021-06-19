@@ -5,6 +5,7 @@ app_begin:
 ; Startup handler
     ORG #0000
     jp startup_handler
+    DB 0,"Sizif Magic ROM",0
 
 ; NMI handler
     ORG #0066
@@ -374,6 +375,8 @@ main:
     include strings.asm
 
 app_end:
+    ORG #3FE8
+    DB 0,"End of Sizif Magic ROM",0
 
 ; Magic vectors
 Exit_vector EQU #F000
