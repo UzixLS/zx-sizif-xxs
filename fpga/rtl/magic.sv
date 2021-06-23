@@ -75,7 +75,7 @@ always @(posedge clk28 or negedge rst_n) begin
         mix_acb <= 0;
         mix_mono <= 0;
         ram_mode <= RAM_512;
-        rom_plus3 <= 0;
+        rom_plus3 <= 1'b1;
         rom_alt48 <= 0;
         joy_sinclair <= 0;
         divmmc_en <= 1'b1;
