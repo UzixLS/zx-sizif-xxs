@@ -55,7 +55,7 @@ reg pause = 0;
 wire ps2_key_pause, ps2_key_reset;
 wire [2:0] border;
 wire magic_reboot, magic_beeper;
-wire up_en;
+wire up_active;
 wire clkwait;
 wire [2:0] rampage128;
 wire div_wait;
@@ -145,7 +145,7 @@ screen screen0(
     .blink(blink),
     .attr_next(attr_next),
 
-    .up_en(up_en),
+    .up_en(up_active),
     .up_ink_addr(up_ink_addr),
     .up_paper_addr(up_paper_addr),
     .up_ink(up_ink),
@@ -220,7 +220,7 @@ cpucontrol cpucontrol0(
     .turbo(turbo),
     .timings(timings),
     .pause(pause),
-    .ext_wait_cycle(div_wait || up_en),
+    .ext_wait_cycle(div_wait || up_active),
     .init_done_in(init_done),
 
     .n_rstcpu(n_rstcpu),
@@ -235,7 +235,7 @@ cpucontrol cpucontrol0(
 
 /* MAGIC */
 wire magic_mode, magic_map;
-wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, mix_acb, mix_mono;
+wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, mix_acb, mix_mono, up_en, covox_en, sd_en;
 magic magic0(
     .rst_n(usrrst_n),
     .clk28(clk28),
@@ -260,7 +260,10 @@ magic magic0(
     .rom_alt48(rom_alt48),
     .mix_acb(mix_acb),
     .mix_mono(mix_mono),
-    .divmmc_en(divmmc_en)
+    .divmmc_en(divmmc_en),
+    .ulaplus_en(up_en),
+    .covox_en(covox_en),
+    .sd_en(sd_en)
 );
 
 
@@ -341,8 +344,8 @@ wire [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
 soundrive soundrive0(
     .rst_n(usrrst_n),
     .clk28(clk28),
-    .en_covox(1'b1),
-    .en_soundrive(1'b1),
+    .en_covox(covox_en),
+    .en_soundrive(sd_en),
 
     .bus(bus),
 
@@ -422,13 +425,13 @@ wire [7:0] up_dout;
 ulaplus ulaplus0(
     .rst_n(usrrst_n),
     .clk28(clk28),
-    .en(1'b1),
-    
+    .en(up_en),
+
     .bus(bus),
     .d_out(up_dout),
     .d_out_active(up_dout_active),
 
-    .active(up_en),
+    .active(up_active),
     .ink_addr(up_ink_addr),
     .paper_addr(up_paper_addr),
     .ink(up_ink),
