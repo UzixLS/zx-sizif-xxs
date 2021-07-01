@@ -164,20 +164,20 @@ screen screen0(
 
 /* VIDEO OUTPUT */
 always @*
-    luma <= {g[2], r[2], b[2], g[1], r[1], b[1]};
+    luma <= 2*r + 5*g + b;
 
 wire [2:0] chroma0;
 chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
     .cg_clock(clk40),
-    .cg_rgb({g[2],r[2],b[2]}),
+    .cg_rgb({|g,|r,|b}),
     .cg_hsync(hsync),
     .cg_enable(1'b1),
     .cg_pnsel(1'b0),
     .cg_out(chroma0)
 );
-assign chroma[0] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
-assign chroma[1] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
-assign chroma[2] = (chroma0[2]|chroma0[1])? chroma0[0] : 1'bz;
+assign chroma[0] = (chroma0[1])? chroma0[0] : 1'bz;
+assign chroma[1] = (chroma0[2])? chroma0[0] : 1'bz;
+assign chroma[2] = (chroma0[2])? chroma0[0] : 1'bz;
 
 
 /* PS/2 KEYBOARD */

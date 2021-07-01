@@ -244,8 +244,8 @@ always @(posedge clk28) begin
     end
     else begin
         {g[2], r[2], b[2]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
-        {g[1], r[1], b[1]} = ((g[2] | r[2] | b[2]) & attr[6])? 3'b111 : 3'b000;
-        {g[0], r[0], b[0]} = {g[1], r[1], b[1]};
+        {g[1], r[1], b[1]} = {g[2] & attr[6], r[2] & attr[6], b[2] & attr[6]};
+        {g[0], r[0], b[0]} = {g[2], r[2], b[2]};
     end
     csync = ~(vsync0 ^ hsync0);
     vsync = ~vsync0;
