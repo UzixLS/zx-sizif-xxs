@@ -415,8 +415,7 @@ divmmc divmmc0(
     .div_ramwr_mask(div_ramwr_mask),
     .div_wait(div_wait)
 );
-///assign sd_mosi = (sd_cs == 1'b0)? sd_mosi0 : tape_out;
-assign sd_mosi = sd_mosi0;
+assign sd_mosi = (~sd_cd)? sd_mosi0 : tape_out;
 
 
 /* ULAPLUS */
