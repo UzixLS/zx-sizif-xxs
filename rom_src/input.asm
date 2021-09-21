@@ -14,7 +14,7 @@ input_read:
     in a, (#1f)   ; ...
     bit 7, a      ; detect presence by 7th bit
     jr nz, .enter ; ...
-    and #1f       ; mask useless bits
+    and #3f       ; mask useless bits
     ld b, a       ; ...
 .enter:
     ld a, #bf     ; read keys
@@ -85,8 +85,15 @@ input_read:
     ret
 .sinclair_09876_6:
     bit 4, a      ; handle 6 (LEFT) key
-    jr nz, .return ; ...
+    jr nz, .sinclair_ssmnb ; ...
     set 1, b      ; ...
+    ret
+.sinclair_ssmnb:
+    ld a, #7f     ; read keys
+    in a, (#fe)   ; ...
+    bit 2, a      ; handle M (EXIT) key (in Sinclair mode sega C button is mapped to M)
+    jr nz, .return ; ...
+    set 5, b      ; ...
     ret
 .space_break:
     ld a, #7f     ; read keys
@@ -128,7 +135,7 @@ input_read:
 ; OUT - BC - garbage
 input_beep:
     or a
-    jr z, .return
+    ret z
     IFDEF TEST_BUILD
         ld a, #10            ; blink border
         out (#fe), a         ; ...
@@ -142,7 +149,6 @@ input_beep:
     ld a, 1                  ; blink border back
     ld bc, #01ff             ; ...
     out (c), a               ; ...
-.return:
     ret
 
 

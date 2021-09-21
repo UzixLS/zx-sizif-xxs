@@ -31,8 +31,9 @@ app_begin:
     call menu_process
     ld a, #01
     out #fe, a
-    jr .loop
-
+    ld a, (var_exit_flag)
+    or a
+    jr z, .loop
 
 save_variables:
     ret
@@ -42,24 +43,14 @@ includes:
     include config.asm
     include draw.asm
     include input.asm
+    include pause.asm
     include menu.asm
     include menu_structure.asm
     include font.asm
     include strings.asm
 
 variables:
-var_exit_flag: DB 0
-var_exit_reboot: DB 0
-var_input_key: DB 0
-var_input_key_last: DB 0
-var_input_key_hold_timer: DB 0
-var_menu_current_item: DB 0
-var_menu_animate_cnt: DB 0
-
-cfg CFG_T
-cfg_saved CFG_T
-cfg_initialized: DB #B1, #5B, #00, #B5
-
+    include variables.asm
 
     DISPLAY "Application size: ",/D,$-app_begin
     CSPECTMAP "main_test.map"

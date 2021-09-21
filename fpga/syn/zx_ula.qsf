@@ -166,6 +166,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/ports.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/magic.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/divmmc.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/cpucontrol.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/memcontrol.sv
 set_global_assignment -name VERILOG_FILE ../rtl/chroma_gen.v
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/turbosound.sv
 set_global_assignment -name VHDL_FILE ../rtl/ym2149.vhd

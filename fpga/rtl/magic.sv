@@ -4,26 +4,28 @@ module magic(
     input clk28,
 
     cpu_bus bus,
+    output [7:0] d_out,
+    output d_out_active,
+
     input n_int,
     input n_int_next,
     output reg n_nmi,
 
     input magic_button,
+    input pause_button,
+    input sd_cd,
+    input div_automap,
 
     output reg magic_mode,
     output reg magic_map,
 
     output reg magic_reboot,
     output reg magic_beeper,
-    output timings_t timings,
+    output machine_t machine,
     output turbo_t turbo,
-    output rammode_t ram_mode,
+    output panning_t panning,
     output reg joy_sinclair,
-    output reg rom_plus3,
-    output reg rom_alt48,
-    output reg mix_acb,
-    output reg mix_mono,
-    output reg divmmc_en,
+    output divmmc_t divmmc_en,
     output reg ulaplus_en,
     output reg covox_en,
     output reg sd_en
@@ -40,7 +42,7 @@ always @(posedge clk28 or negedge rst_n) begin
         magic_unmap_next <= 0;
     end
     else begin
-        if (magic_button == 1'b1 && n_int == 1'b1 && n_int_next == 1'b0) begin
+        if ((magic_button || pause_button) && n_int == 1'b1 && n_int_next == 1'b0) begin
             if (!magic_mode)
                 n_nmi <= 1'b0;
             magic_mode <= 1'b1;
@@ -68,20 +70,16 @@ end
 
 
 /* MAGIC CONFIG */
-wire config_cs = magic_map && bus.ioreq && bus.a_reg[7:0] == 8'hff;
+wire config_cs = magic_map && bus.ioreq && bus.a_reg[7:0] == 8'hFF;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         magic_reboot <= 0;
         magic_beeper <= 0;
-        timings <= TIMINGS_PENT;
+        machine <= MACHINE_PENT;
         turbo <= TURBO_NONE;
-        mix_acb <= 0;
-        mix_mono <= 0;
-        ram_mode <= RAM_512;
-        rom_plus3 <= 1'b1;
-        rom_alt48 <= 0;
+        panning <= PANNING_ABC;
         joy_sinclair <= 0;
-        divmmc_en <= 1'b1;
+        divmmc_en <= DIVMMC_NOOS;
         ulaplus_en <= 1'b1;
         covox_en <= 1'b1;
         sd_en <= 1'b1;
@@ -89,18 +87,29 @@ always @(posedge clk28 or negedge rst_n) begin
     else if (config_cs && bus.wr) case (bus.a_reg[15:8])
         8'h00: magic_reboot <= bus.d_reg[0];
         8'h01: magic_beeper <= bus.d_reg[0];
-        8'h02: timings <= timings_t'(bus.d_reg[1:0]);
-        8'h03: turbo <= turbo_t'(bus.d_reg[1:0]);
-        8'h04: {mix_mono, mix_acb} <= bus.d_reg[1:0];
-        8'h05: rom_plus3 <= bus.d_reg[0];
-        8'h06: rom_alt48 <= bus.d_reg[0];
+        8'h02: machine <= machine_t'(bus.d_reg[2:0]);
+        8'h03: turbo <= turbo_t'(bus.d_reg[2:0]);
+        8'h04: panning <= panning_t'(bus.d_reg[1:0]);
         8'h07: joy_sinclair <= bus.d_reg[0];
-        8'h08: ram_mode <= rammode_t'(bus.d_reg[1:0]);
-        8'h09: divmmc_en <= bus.d_reg[0];
+        8'h09: divmmc_en <= divmmc_t'(bus.d_reg[1:0]);
         8'h0a: ulaplus_en <= bus.d_reg[0];
         8'h0b: {sd_en, covox_en} <= bus.d_reg[1:0];
     endcase
 end
+
+reg config_rd;
+wire [7:0] config_data = {4'b0000, div_automap, sd_cd, pause_button, magic_button};
+always @(posedge clk28 or negedge rst_n) begin
+    if (!rst_n)
+        config_rd <= 0;
+    else
+        config_rd <= config_cs && bus.rd && bus.a_reg[15:8] == 8'hFF;
+end
+
+
+/* BUS CONTROLLER */
+assign d_out_active = config_rd;
+assign d_out = config_data;
 
 
 endmodule

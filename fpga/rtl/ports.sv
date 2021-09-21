@@ -2,9 +2,6 @@ import common::*;
 module ports(
     input rst_n,
     input clk28,
-    input en_128k,
-    input en_plus3,
-    input en_profi,
     input en_kempston,
     input en_sinclair,
 
@@ -12,13 +9,12 @@ module ports(
     output [7:0] d_out,
     output d_out_active,
 
-    input timings_t timings,
-    input clkcpu_ck,
-    input screen_loading,
-    input [7:0] attr_next,
+    input machine_t machine,
+    input port_ff_active,
+    input [7:0] port_ff_data,
     input [4:0] kd,
     input [7:0] kempston_data,
-    input magic_button,
+    input magic_map,
     input tape_in,
 
     output reg tape_out,
@@ -27,21 +23,21 @@ module ports(
     output reg screenpage,
     output reg rompage128,
     output reg [2:0] rampage128,
-    output reg [3:0] rampage_ext,
+    output reg [2:0] rampage_ext,
     output reg [2:0] port_1ffd,
-    output reg port_dffd_d3,
-    output reg port_dffd_d4
+    output reg [4:0] port_dffd
+
 );
 
 
 /* PORT #FF */
-wire [7:0] port_ff_data = attr_next;
 reg port_ff_rd;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         port_ff_rd <= 0;
     else
-        port_ff_rd <= bus.rd && bus.ioreq && (timings != TIMINGS_PENT || bus.a_reg[7:0] == 8'hFF) && screen_loading;
+        port_ff_rd <= bus.rd && bus.ioreq && !magic_map && port_ff_active &&
+            (machine != MACHINE_S3) && (machine != MACHINE_PENT || bus.a_reg[7:0] == 8'hFF);
 end
 
 
@@ -56,14 +52,14 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 reg [4:0] kd0;
-wire [7:0] port_fe_data = {~magic_button, tape_in, 1'b1, kd0};
-always @(posedge clk28 or negedge rst_n) begin
+wire [7:0] port_fe_data = {1'b1, tape_in, 1'b1, kd0};
+always @(negedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         beeper <= 0;
         tape_out <= 0;
         border <= 0;
     end
-    else if (port_fe_cs && bus.wr && clkcpu_ck) begin // clkcpu_ck to synchronize border
+    else if (port_fe_cs && bus.wr) begin
         beeper <= bus.d_reg[4];
         tape_out <= bus.d_reg[3];
         border <= bus.d_reg[2:0];
@@ -86,7 +82,9 @@ end
 
 
 /* PORT #7FFD */
-wire port_7ffd_cs = en_128k && bus.ioreq && bus.a_reg[1] == 0 && bus.a_reg[15] == 0 && (bus.a_reg[14] == 1'b1 || !en_plus3);
+wire port_7ffd_cs = bus.ioreq && bus.a_reg[1] == 0 && bus.a_reg[15] == 0 &&
+                    (bus.a_reg[14] == 1'b1 || (!magic_map && machine != MACHINE_S3)) &&
+                    (machine != MACHINE_S48 || magic_map);
 reg lock_7ffd;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
@@ -95,7 +93,7 @@ always @(posedge clk28 or negedge rst_n) begin
         rompage128 <= 0;
         lock_7ffd <= 0;
     end
-    else if (port_7ffd_cs && bus.wr && (lock_7ffd == 0 || port_dffd_d4 == 1'b1)) begin
+    else if (port_7ffd_cs && bus.wr && (lock_7ffd == 0 || port_dffd[4] == 1'b1)) begin
         rampage128 <= bus.d_reg[2:0];
         screenpage <= bus.d_reg[3];
         rompage128 <= bus.d_reg[4];
@@ -105,23 +103,21 @@ end
 
 
 /* PORT #DFFD */
-wire port_dffd_cs = en_profi && bus.ioreq && bus.a_reg == 16'hDFFD;
+wire port_dffd_cs = bus.ioreq && bus.a_reg == 16'hDFFD && (machine == MACHINE_PENT || magic_map);
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         rampage_ext <= 0;
-        port_dffd_d3 <= 0;
-        port_dffd_d4 <= 0;
+        port_dffd <= 0;
     end
     else if (port_dffd_cs && bus.wr) begin
         rampage_ext <= bus.d_reg[2:0];
-        port_dffd_d3 <= bus.d_reg[3];
-        port_dffd_d4 <= bus.d_reg[4];
+        port_dffd <= bus.d_reg[4:0];
     end
 end
 
 
 /* PORT #1FFD */
-wire port_1ffd_cs = en_plus3 && bus.ioreq && bus.a_reg == 16'h1FFD;
+wire port_1ffd_cs = bus.ioreq && bus.a_reg == 16'h1FFD && (machine == MACHINE_S3 || magic_map);
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         port_1ffd <= 0;

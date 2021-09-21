@@ -48,11 +48,9 @@ pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
 
 
 /* SHARED DEFINITIONS */
-timings_t timings;
+machine_t machine;
 turbo_t turbo;
-rammode_t ram_mode;
-reg pause = 0;
-wire ps2_key_pause, ps2_key_reset;
+wire ps2_key_reset, ps2_key_pause;
 wire [2:0] border;
 wire magic_reboot, magic_beeper;
 wire up_active;
@@ -102,30 +100,25 @@ always @(posedge clk28) begin
     usrrst_n <= (!rst_n || ps2_key_reset || magic_reboot)? 1'b0 : 1'b1;
 end
 
-/* PAUSE */
-always @(posedge clk28) begin
-    if (n_int == 1'b0 && bus.rfsh)
-        pause <= ps2_key_pause;
-end
-
 
 /* SCREEN CONTROLLER */
 wire blink;
-wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0] ^ (pause & blink)};
-wire [2:0] r, g, b;
+wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0]};
+wire [2:0] r, g;
+wire [1:0] b;
 wire hsync;
+wire screen_contention, port_ff_active;
+wire [14:0] screen_addr;
 wire [5:0] up_ink_addr, up_paper_addr;
 wire [7:0] up_ink, up_paper;
-wire screen_loading;
-wire [14:0] screen_addr;
-wire [7:0] attr_next;
 wire [8:0] vc, hc;
+wire [7:0] port_ff_data;
 wire clk14, clk7, clk35, ck14, ck7, ck35;
 screen screen0(
-    .rst_n(rst_n),
+    .rst_n(usrrst_n),
     .clk28(clk28),
 
-    .timings(timings),
+    .machine(machine),
     .border(screen_border),
 
     .r(r),
@@ -141,15 +134,16 @@ screen screen0(
     .fetch_next(screen_fetch_next),
     .fetch_data(bus.d),
 
-    .loading(screen_loading),
-    .blink(blink),
-    .attr_next(attr_next),
-
     .up_en(up_active),
     .up_ink_addr(up_ink_addr),
     .up_paper_addr(up_paper_addr),
     .up_ink(up_ink),
     .up_paper(up_paper),
+
+    .contention(screen_contention),
+    .blink(blink),
+    .port_ff_active(port_ff_active),
+    .port_ff_data(port_ff_data),
 
     .vc_out(vc),
     .hc_out(hc),
@@ -210,16 +204,17 @@ cpucontrol cpucontrol0(
     .clk14(clk14),
     .clk7(clk7),
     .clk35(clk35),
+    .ck14(ck14),
+    .ck7(ck7),
 
     .bus(bus),
 
     .vc(vc),
     .hc(hc),
     .rampage128(rampage128),
-    .screen_loading(screen_loading),
+    .machine(machine),
+    .screen_contention(screen_contention),
     .turbo(turbo),
-    .timings(timings),
-    .pause(pause),
     .ext_wait_cycle(div_wait || up_active),
     .init_done_in(init_done),
 
@@ -234,32 +229,39 @@ cpucontrol cpucontrol0(
 
 
 /* MAGIC */
+wire div_automap;
+wire [7:0] magic_dout;
+wire magic_dout_active;
 wire magic_mode, magic_map;
-wire divmmc_en, joy_sinclair, rom_plus3, rom_alt48, mix_acb, mix_mono, up_en, covox_en, sd_en;
+wire joy_sinclair, up_en, covox_en, sd_en;
+panning_t panning;
+divmmc_t divmmc_en;
 magic magic0(
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
 
     .bus(bus),
+    .d_out(magic_dout),
+    .d_out_active(magic_dout_active),
+
     .n_int(n_int),
     .n_int_next(n_int_next),
     .n_nmi(n_nmi),
 
     .magic_button(ps2_key_magic),
+    .pause_button(ps2_key_pause),
+    .sd_cd(sd_cd),
+    .div_automap(div_automap),
 
     .magic_mode(magic_mode),
     .magic_map(magic_map),
 
     .magic_reboot(magic_reboot),
     .magic_beeper(magic_beeper),
-    .timings(timings),
+    .machine(machine),
     .turbo(turbo),
-    .ram_mode(ram_mode),
     .joy_sinclair(joy_sinclair),
-    .rom_plus3(rom_plus3),
-    .rom_alt48(rom_alt48),
-    .mix_acb(mix_acb),
-    .mix_mono(mix_mono),
+    .panning(panning),
     .divmmc_en(divmmc_en),
     .ulaplus_en(up_en),
     .covox_en(covox_en),
@@ -273,31 +275,26 @@ wire ports_dout_active;
 wire beeper, tape_out;
 wire screenpage;
 wire rompage128;
-wire [3:0] rampage_ext;
+wire [2:0] rampage_ext;
 wire [2:0] port_1ffd;
-wire port_dffd_d3;
-wire port_dffd_d4;
+wire [4:0] port_dffd;
 ports ports0 (
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
 
     .bus(bus),
     .d_out(ports_dout),
     .d_out_active(ports_dout_active),
 
-    .en_128k(ram_mode == RAM_512 || ram_mode == RAM_128),
-    .en_plus3(rom_plus3),
-    .en_profi(ram_mode == RAM_512),
     .en_kempston(!joy_sinclair),
     .en_sinclair(joy_sinclair),
 
-    .timings(timings),
-    .clkcpu_ck(clkcpu_ck),
-    .screen_loading(screen_loading),
-    .attr_next(attr_next),
+    .machine(machine),
+    .port_ff_active(port_ff_active),
+    .port_ff_data(port_ff_data),
     .kd(ps2_kd),
     .kempston_data({3'b000, ps2_joy_fire, ps2_joy_up, ps2_joy_down, ps2_joy_left, ps2_joy_right}),
-    .magic_button(ps2_key_magic),
+    .magic_map(magic_map),
     .tape_in(sd_miso_tape_in),
 
     .tape_out(tape_out),
@@ -308,8 +305,7 @@ ports ports0 (
     .rampage128(rampage128),
     .rampage_ext(rampage_ext),
     .port_1ffd(port_1ffd),
-    .port_dffd_d3(port_dffd_d3),
-    .port_dffd_d4(port_dffd_d4)
+    .port_dffd(port_dffd)
 );
 
 
@@ -318,7 +314,7 @@ wire turbosound_dout_active;
 wire [7:0] turbosound_dout;
 wire [7:0] ay_a0, ay_b0, ay_c0, ay_a1, ay_b1, ay_c1;
 turbosound turbosound0(
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
     .ck35(ck35),
     .en(1'b1),
@@ -327,8 +323,6 @@ turbosound turbosound0(
     .bus(bus),
     .d_out(turbosound_dout),
     .d_out_active(turbosound_dout_active),
-
-    .pause(pause),
 
     .ay_a0(ay_a0),
     .ay_b0(ay_b0),
@@ -355,10 +349,9 @@ soundrive soundrive0(
     .ch_r1(soundrive_r1)
 );
 
-
 /* SOUND MIXER */
 mixer mixer0(
-    .rst_n(rst_n),
+    .rst_n(usrrst_n),
     .clk28(clk28),
 
     .beeper(beeper ^ magic_beeper),
@@ -375,8 +368,8 @@ mixer mixer0(
     .sd_r0(soundrive_r0),
     .sd_r1(soundrive_r1),
 
-    .ay_acb(mix_acb),
-    .mono(mix_mono),
+    .ay_acb(panning == PANNING_ABC),
+    .mono(panning == PANNING_MONO),
 
     .dac_l(snd_l),
     .dac_r(snd_r)
@@ -389,12 +382,12 @@ wire [7:0] div_dout;
 wire [3:0] div_page;
 wire sd_mosi0;
 divmmc divmmc0(
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
     .ck14(ck14),
     .ck7(ck7),
-    .en(divmmc_en),
-    .en_hooks(~sd_cd),
+    .en(divmmc_en == DIVMMC_ON || divmmc_en == DIVMMC_NOOS),
+    .en_hooks(divmmc_en == DIVMMC_ON),
 
     .bus(bus),
     .d_out(div_dout),
@@ -405,15 +398,16 @@ divmmc divmmc0(
     .sd_sck(sd_sck),
     .sd_cs(sd_cs),
     
-    .rammap(port_dffd_d4 | port_1ffd[0]),
+    .rammap(port_dffd[4] | port_1ffd[0]),
     .magic_mode(magic_mode),
     .magic_map(magic_map),
 
-    .div_page(div_page),
-    .div_map(div_map),
-    .div_ram(div_ram),
-    .div_ramwr_mask(div_ramwr_mask),
-    .div_wait(div_wait)
+    .page(div_page),
+    .map(div_map),
+    .automap(div_automap),
+    .ram(div_ram),
+    .ramwr_mask(div_ramwr_mask),
+    .cpuwait(div_wait)
 );
 assign sd_mosi = (~sd_cd)? sd_mosi0 : tape_out;
 
@@ -422,7 +416,7 @@ assign sd_mosi = (~sd_cd)? sd_mosi0 : tape_out;
 wire up_dout_active;
 wire [7:0] up_dout;
 ulaplus ulaplus0(
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
     .en(up_en),
 
@@ -484,77 +478,46 @@ asmi asmi0(
 
 
 /* MEMORY CONTROLLER */
-reg romreq, ramreq, ramreq_wr;
-always @(posedge clk28 or negedge rst_n) begin
-    if (!rst_n) begin
-        romreq = 1'b0;
-        ramreq = 1'b0;
-        ramreq_wr = 1'b0;
-    end
-    else begin
-        romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
-            (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd_d4 && !port_1ffd[0]));
-        ramreq = bus.mreq && !bus.rfsh && !romreq;
-        ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
-    end
-end
+memcontrol memcontrol0(
+    .rst_n(rst_n),
+    .clk28(clk28),
+    .bus(bus),
+    .va(va),
+    .vd(vd),
+    .n_vrd(n_vrd),
+    .n_vwr(n_vwr),
 
-assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_fetch) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
-assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b0 : 1'b1;
+    .machine(machine),
+    .screenpage(screenpage),
+    .screen_fetch(screen_fetch),
+    .snow(snow),
+    .screen_addr(screen_addr),
+    .magic_map(magic_map),
+    .rampage128(rampage128),
+    .rompage128(rompage128),
+    .port_1ffd(port_1ffd),
+    .port_dffd(port_dffd),
+    .rampage_ext(rampage_ext),
+    .divmmc_en(divmmc_en != DIVMMC_OFF),
+    .div_ram(div_ram),
+    .div_map(div_map),
+    .div_ramwr_mask(div_ramwr_mask),
+    .div_page(div_page),
 
-/* VA[18:13] map
- * 00xxxx 128Kb of roms
- * 00111x 16Kb of magic ram
- * 01xxxx 128Kb of divmmc memory
- * 10xxxx 128Kb of extended ram (via port dffd)
- * 11xxxx 128Kb of main ram
- */
-
-reg [18:13] ram_a;
-always @(posedge clk28) begin
-    ram_a <=
-        magic_map & bus.a[15] & bus.a[14]? {2'b00, 3'b111, bus.a[13]} :
-        magic_map? {3'b111, screenpage, bus.a[14:13]} :
-        div_map & ~bus.a[14] & ~bus.a[15] & bus.a[13]? {2'b01, div_page} :
-        div_map & ~bus.a[14] & ~bus.a[15]? {2'b01, 4'b0011} :
-        port_dffd_d3 & bus.a[15]? {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} :
-        port_dffd_d3 & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
-        (port_1ffd[2] == 1'b0 && port_1ffd[0] == 1'b1)? {2'b11, port_1ffd[1], bus.a[15], bus.a[14], bus.a[13]} :
-        (port_1ffd == 3'b101)? {2'b11, ~(bus.a[15] & bus.a[14]), bus.a[15], bus.a[14]} :
-        (port_1ffd == 3'b111)? {2'b11, ~(bus.a[15] & bus.a[14]), (bus.a[15] | bus.a[14]), bus.a[14]} :
-        bus.a[15] & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
-        {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} ;
-end
-
-reg [16:14] rom_a;
-always @(posedge clk28) begin
-    rom_a <=
-        magic_map? 3'd2 :
-        div_map? 3'd3 :
-        (rom_plus3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b0)? 3'd4 :
-        (rom_plus3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b1)? 3'd5 :
-        (rom_plus3 && port_1ffd[2] == 1'b1 && rompage128 == 1'b0)? 3'd6 :
-        (rompage128 == 1'b1 && rom_alt48 == 1'b1)? 3'd7 :
-        (rompage128 == 1'b1)? 3'd1 :
-        3'd0;
-end
-
-assign va[18:0] =
-    rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
-    screen_fetch && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
-    screen_fetch? {3'b111, screenpage, screen_addr} :
-    romreq? {2'b00, rom_a[16:14], bus.a[13], {13{1'bz}}} :
-    {ram_a[18:13], {13{1'bz}}};
-
-assign vd[7:0] =
-    ~n_vrd? {8{1'bz}} :
-    rom2ram_ram_wren? rom2ram_dataout :
-    up_dout_active? up_dout :
-    div_dout_active? div_dout :
-    turbosound_dout_active? turbosound_dout :
-    ports_dout_active? ports_dout :
-    ~n_wr? {8{1'bz}} :
-    8'hFF;
+    .rom2ram_ram_address(rom2ram_ram_address),
+    .rom2ram_ram_wren(rom2ram_ram_wren),
+    .rom2ram_dataout(rom2ram_dataout),
+    .magic_dout_active(magic_dout_active),
+    .magic_dout(magic_dout),
+    .up_dout_active(up_dout_active),
+    .up_dout(up_dout),
+    .div_dout_active(div_dout_active),
+    .div_dout(div_dout),
+    .turbosound_dout_active(turbosound_dout_active),
+    .turbosound_dout(turbosound_dout),
+    .ports_dout_active(ports_dout_active),
+    .ports_dout(ports_dout)
+);
 
 
 endmodule

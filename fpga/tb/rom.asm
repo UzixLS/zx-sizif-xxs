@@ -1,26 +1,19 @@
     DEVICE ZXSPECTRUM48
 
-    ORG #0000
+    ORG #8000 // mapped #0000
 Start:
     nop
-    jp Main
+    jp #1000
 
-    ORG #0038
+    ORG #8038
 Int1:
-    jp #1ff8
-    ORG #00FF
-    DB #38
+	reti
 
-    ORG #0066
+    ORG #8066
 Nmi:
-    jp #1ffa
-    push af
-    ld a, #08
-    out (#ff), a
-    pop af
     retn
 
-    ORG #1000
+    ORG #9000
 Main:
     im 2
     ei
@@ -46,15 +39,8 @@ Main:
     jp #1fff
 Loop:
     halt
-    jp Loop
+    jr Loop
 
-    ORG #1FF8 // DivROM exit vector
-    reti
-    ORG #1FFA // DivROM exit vector
-    retn
-    ORG #1FFF // DivROM exit vector
-    nop
-    jp #3D00
 
     ORG #C000 // mapped #0000
 DivROM_Start:

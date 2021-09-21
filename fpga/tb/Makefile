@@ -5,6 +5,7 @@ SRC_T80=./t80/t80n_pack.vhd ./t80/t80n.vhd ./t80/t80n_alu.vhd ./t80/t80n_mcode.v
 all: testbench_zx_ula
 
 testbench_zx_ula: IVFLAGS+=-I./az80/ -I./t80/ -I../rtl/
+testbench_zx_ula: VLOGFLAGS+=+define+TESTBENCH
 testbench_zx_ula: testbench_zx_ula.v ../rtl/common.sv $(wildcard stubs/*.v ../rtl/*.vhd ../rtl/*.v ../rtl/*.sv)
 testbench_zx_ula: ${SRC_T80}
 testbench_zx_ula: rom.mem

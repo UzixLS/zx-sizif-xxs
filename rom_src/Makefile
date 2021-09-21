@@ -1,6 +1,7 @@
 export PATH:=/cygdrive/c/Hwdev/sjasmplus/:/cygdrive/c/Dev/srec/:${PATH}
 
-SJOPTS='-DSIZIFXXS'
+REV=D
+SJOPTS=-DSIZIFXXS
 
 .PHONY: all clean .FORCE
 .FORCE:

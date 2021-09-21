@@ -125,7 +125,7 @@ print_char:
 print_string:
     ld a, (hl)              ; A = *string
     or a                    ; if (A == 0) - exit
-    jr z, .return           ; ...
+    ret z                   ; ...
     push bc
     push hl
     call print_char
@@ -134,7 +134,6 @@ print_string:
     inc hl                  ; string++
     inc c                   ; column++
     jr print_string
-.return:
     ret
 
 
@@ -151,7 +150,7 @@ print_string:
 print_string_rev:
     ld a, (hl)              ; A = *string
     or a                    ; if (A == 0) - exit
-    jr z, .return           ; ...
+    ret z                   ; ...
     push bc
     push hl
     call print_char
@@ -160,7 +159,6 @@ print_string_rev:
     dec hl                  ; string--
     dec c                   ; column--
     jr print_string_rev
-.return:
     ret
 
 
@@ -280,22 +278,23 @@ draw_menu:
     push hl              ; IX = menu first item addr
     pop ix               ; ...
 .line_loop:
-    ld l, (ix+0)         ; HL = menu_t.textaddr
-    ld h, (ix+1)         ; ...
+    ld l, (ix+MENUENTRY_T.text_addr+0) ; HL = menuentry_t.textaddr
+    ld h, (ix+MENUENTRY_T.text_addr+1) ; ...
     ld a, h              ; if (HL == 0) - exit
     or l                 ; ...
-    jr z, .return        ; ...
-    push bc
+    ret z                ; ...
     push de
+    push bc
     push ix
     call print_string    ; print menu item text
     pop ix
-    pop de
     pop bc
+    pop de
+    dec sp               ; DE will be restored in .skip_val
+    dec sp               ; ...
 .print_val:
-    push de              ; will be restored in .skip_val
-    ld l, (ix+2)         ; HL = menu_t.value_cb_addr
-    ld h, (ix+3)         ; ...
+    ld l, (ix+MENUENTRY_T.value_cb_addr+0) ; HL = menuentry_t.value_cb_addr
+    ld h, (ix+MENUENTRY_T.value_cb_addr+1) ; ...
     ld a, h              ; if (HL == 0) - skip value print
     or l                 ; ...
     jr z, .skip_val      ; ...
@@ -313,7 +312,7 @@ draw_menu:
     ld a, b              ; row += 8
     add a, 8             ; ...
     ld b, a              ; ...
-    ld de, MENU_T        ; IX = IX + sizeof(menu_t)
+    ld de, MENUENTRY_T   ; IX = IX + sizeof(menuentry_t)
     add ix, de           ; ...
     pop de               ; restore E - columns
     jr .line_loop
@@ -332,17 +331,16 @@ draw_menu:
 ; OUT -  B - garbage
 ; OUT -  E - garbage
 ; OUT - HL - garbage
-draw_menu_item_line:
+draw_attribute_line:
     call coords_to_attribute_address ; HL = attribute address
 .loop:
     ld a, e                      ; if (columns == 0) - exit
     or a                         ; ...
-    jr z, .return                ; ...
+    ret z                        ; ...
     ld (hl), d                   ; write attribute
     inc hl                       ; column++
     dec e                        ; columns--
     jr .loop
-.return:
     ret
 
 

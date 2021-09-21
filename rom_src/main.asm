@@ -4,11 +4,15 @@
 app_begin:
 ; Startup handler
     ORG #0000
+    ex de, hl ; EB opcode used by CPLD to determine magic ROM presence
+    ex de, hl ; ...
     jp startup_handler
     DB 0,"Sizif Magic ROM",0
 
 ; NMI handler
     ORG #0066
+    ex de, hl ; EB opcode used by CPLD to determine magic ROM presence
+    ex de, hl ; ...
     jp nmi_handler
 
 ; INT IM1 handler
@@ -35,8 +39,23 @@ startup_handler:
     ld ix, #5800    ; draw 4 rygb boxes on left top corner to indicate boot
     ld (ix+0), #D2  ; r
     ld (ix+1), #F6  ; y
-    call init_config
+    call check_initialized
+    jr z, .warm_boot
+    im 1            ; wait for ps/2 keyboard ready
+    ld b, POWERON_DELAY ; ...
+.loop               ; ...
+    ei              ; ...
+    halt            ; ...
+    djnz .loop      ; ...
+    call init_default_config
+    call detect_sd_card
+    call detect_ext_board
+    call check_custom_rom
+.warm_boot:
+    call load_config
     call init_cpld
+    call save_initialized
+    call mute_saa1099  ; saa1099 does not have reset pin
     ld (ix+2), #E4  ; g
     ld (ix+3), #C9  ; b
     ld hl, 0
@@ -55,18 +74,25 @@ nmi_handler:
     ld (var_magic_enter_cnt), a
     ld (var_magic_leave_cnt), a
 .loop:
-    call check_magic_delay
-    call check_magic_hold   ; A == 1 if we are entering menu, A == 2 if we are leaving to...
-    bit 0, a                ; ...default nmi handler, A == 0 otherwise
-    jp nz, main             ; ...
-    bit 1, a                ; ...
-    jr z, .loop             ; ...
+    call check_entering_pause ; A[1] == 1 if pause button is pressed
+    bit 1, a                  ; ...
+    jp nz, enter_pause        ; ...
+    call delay_10ms           ; 
+    call check_entering_menu  ; A == 1 if we are entering menu, A == 2 if we are leaving to...
+    bit 0, a                  ; ...default nmi handler, A == 0 otherwise
+    jp nz, enter_menu         ; ...
+    bit 1, a                  ; ...
+    jr z, .loop               ; ...
 .leave:
     xor a                ; disable border
     ld bc, #01ff         ; ...
     out (c), a           ; ...
-    ld hl, #0066         ; jump to default nmi handler
-    jp exit_with_jp      ; ...
+    ld bc, #ffff         ; if divmmc paged - just do retn
+    in a, (c)            ; ...
+    bit 3, a             ; ...
+    jr nz, exit_with_ret ; ... 
+    ld hl, #0066         ; otherwise jump to default nmi handler
+    jr exit_with_jp      ; ...
 
 
 ; IN  - HL - jump address
@@ -90,80 +116,193 @@ exit_with_ret:
     jp Exit_vector-1
 
 
-init_config:
-    ld hl, cfg_initialized     ; if (cfg_initialized == "magic word") {restore cfg} else {default cfg}
+check_initialized:
+    ld hl, cfg_initialized     ; if (cfg_initialized == "magic word") Z = 0, else Z = 1
     ld a, #B1                  ; ...
     cpi                        ; ... hl++
-    jr nz, .init_default       ; ...
+    ret nz                     ; ...
     ld a, #5B                  ; ...
     cpi                        ; ... hl++
-    jr nz, .init_default       ; ...
+    ret nz                     ; ...
     ld a, #00                  ; ...
     cpi                        ; ... hl++
-    jr nz, .init_default       ; ...
+    ret nz                     ; ...
     ld a, #B5                  ; ...
     cpi                        ; ... hl++
-    jr nz, .init_default       ; ...
-    jr .restore                ; ...
-.init_default:
-    ld bc, CFG_T               ; cfg_saved = cfg_default
-    ld de, cfg_saved           ; ...
-    ld hl, CFG_DEFAULT         ; ...
-    ldir                       ; ...
-.restore:
-    ld bc, CFG_T               ; cfg = cfg_saved
-    ld de, cfg                 ; ...
-    ld hl, cfg_saved           ; ...
-    ldir                       ; ...
-.save_magic:
+    ret
+
+save_initialized:
     ld hl, #5BB1               ; cfg_initialized = "magic word"
     ld (cfg_initialized+0), hl ; ...
     ld hl, #B500               ; ...
     ld (cfg_initialized+2), hl ; ...
     ret
 
+init_default_config:
+    ld bc, CFG_T+CFGEXT_T ; cfg_saved = cfg_default
+    ld de, cfg_saved      ; ...
+    ld hl, CFG_DEFAULT    ; ...
+    ldir                  ; ...
+
+load_config:
+    ld bc, CFG_T+CFGEXT_T ; cfg = cfg_saved
+    ld de, cfg            ; ...
+    ld hl, cfg_saved      ; ...
+    ldir                  ; ...
+    ret                   ; ...
+
 save_config:
-    ld bc, CFG_T     ; cfg_saved = cfg
-    ld de, cfg_saved ; ...
-    ld hl, cfg       ; ... 
-    ldir             ; ...
+    ld bc, CFG_T+CFGEXT_T ; cfg_saved = cfg
+    ld de, cfg_saved      ; ...
+    ld hl, cfg            ; ... 
+    ldir                  ; ...
     ret
 
 
 init_cpld:
-.check_ram48k:
-    ld a, (cfg.ram)    ; if ram == 48K - run basic48
-    cp 1               ; ...
-    jr nz, .check_plus3_disabled ; ...
-    ld a, #10          ; ...
-    ld bc, #7ffd       ; ...
-    out (c), a         ; ...
-    ld a, #4           ; ...
-    ld bc, #1ffd       ; ...
-    out (c), a         ; ...
-    jr .do_load
-.check_plus3_disabled:
-    ld a, (cfg.plus3)  ; if plus3 disabled - set 1ffd rom to basic48
-    or a               ; ... this is required for case when plus3 will be
-    jr nz, .do_load    ; ... activated later by magic menu - this prevents
-    ld a, #4           ; ... hang if user activating plus3 while basic48 active
-    ld bc, #1ffd       ; ...
-    out (c), a         ; ...
+.check_alt48rom:
+    ld a, (cfg.rom48)           ; if alternative 48k rom enabled - disable 128 menu
+    or a                        ; ... this is required because 128 menu isn't compatible
+    jr z, .check_7ffd_disabled  ; ... with currently used Looking Glass 48K rom
+    ld a, (cfg.machine)         ; ... however +3e works with looking glass flawlessly
+    cp 2                        ; ...
+    jr z, .check_7ffd_disabled  ; ...
+    ld a, #10                   ; ...
+    ld bc, #7ffd                ; ...
+    out (c), a                  ; ...
+.check_7ffd_disabled:
+    ld a, (cfg.machine)         ; if machine == 48 - set 7ffd rom to basic48
+    or a                        ; ... this is required for case when machine will be
+    jr nz, .check_1ffd_disabled ; ... changed later by magic menu - this prevents
+    ld a, #10                   ; ... hang if user changes machine while basic48 active
+    ld bc, #7ffd                ; ...
+    out (c), a                  ; ...
+.check_1ffd_disabled:
+    ld a, (cfg.machine)         ; if machine != +3 - set 1ffd rom to basic48
+    cp 2                        ; ... this is required for case when +3 will be
+    jr z, .do_load              ; ... activated later by magic menu - this prevents
+    ld a, #4                    ; ... hang if user activate +3 while basic48 active
+    ld bc, #1ffd                ; ...
+    out (c), a                  ; ...
 .do_load:
     ld b, CFG_T        ; B = registers count
     ld c, #ff          ; 
     ld hl, cfg+CFG_T-1 ; HL = &cfg[registers count-1]
     otdr               ; do { b--; out(bc, *hl); hl--; } while(b)
+.do_load_ext:          ; same for extension board
+    ld d, CFGEXT_T     ; ...
+    ld b, #e1          ; ...
+    ld c, #ff          ; ...
+    ld hl, cfgext      ; ...
+.do_load_ext_loop:     ; ...
+    ld a, (hl)         ; ...
+    out (c), a         ; ...
+    inc hl             ; ...
+    inc b              ; ...
+    dec d              ; ...
+    jr nz, .do_load_ext_loop ; ...
+    ret
+
+
+detect_sd_card:
+    ld a, #ff                   ; read sd_cd state in bit 2 of #FFFF port
+    in a, (#ff)                 ; ...
+    bit 2, a                    ; check sd_cd == 0 (card is insert)
+    jr z, .is_insert            ; yes?
+.no_card:
+    xor a                       ; divmmc = OFF
+    ld (cfg_saved.divmmc), a    ; ...
+    ret
+.is_insert:
+    ld a, 1                     ; divmmc = ON
+    ld (cfg_saved.divmmc), a    ; ...
+    ret
+
+
+; OUT -  A = 1 if ext board present, 0 otherwise
+; OUT -  F - garbage
+; OUT - BC - garbage
+detect_ext_board:
+    ld b, #e0       ; read port #e0ff
+    ld c, #ff       ; ...
+    in a, (c)       ; ...
+    ld b, a         ; if (result & 0xF0 != 0) - return
+    and #f0         ; ...
+    jr z, .detected ; ...
+.not_detected:
+    xor a
+    ld (var_ext_presence), a
+    ret
+.detected
+    ld a, 1
+    ld (var_ext_presence), a
+    xor a
+    bit 0, b     ; check TSFM jumper
+    jr z, .cfg_tsfm
+    ld a, 1
+.cfg_tsfm:
+    ld (cfgext_saved.tsfm), a
+    xor a
+    bit 1, b     ; check SAA jumper
+    jr z, .cfg_saa
+    ld a, 1
+.cfg_saa:
+    ld (cfgext_saved.saa), a
+    xor a
+    bit 2, b     ; check GS jumper
+    jr z, .cfg_gs
+    ld a, 1
+.cfg_gs:
+    ld (cfgext_saved.gs), a
+    ret
+
+
+; Check if user holds 1/2/3/4 key on poweron. If true - boot with custom rom
+check_custom_rom:
+    ld a, #f7       ; read 1-5 keys
+    in a, (#fe)     ; ...
+    bit 0, a        ; check key 1 pressed
+    jr z, .key1     ; ...
+    bit 1, a        ; check key 2 pressed
+    jr z, .key2     ; ...
+    bit 2, a        ; check key 3 pressed
+    jr z, .key3     ; ...
+    bit 3, a        ; check key 4 pressed
+    jr z, .key4     ; ...
+    ret
+.key1:
+    ld a, #80       ; rom #0
+    jr .reconfig
+.key2:
+    ld a, #81       ; rom #1
+    jr .reconfig
+.key3:
+    ld a, #82       ; rom #2
+    jr .reconfig
+.key4:
+    ld a, #83       ; rom #3
+.reconfig:
+    ld (cfg_saved.custom_rom), a ; set custom rom
+    xor a
+    ld (cfg_saved.divmmc), a     ; disable divmmc
+    ld (cfg_saved.ulaplus), a    ; disable ula+
+    ret
+
+
+; OUT - A bit 1 if we are entering pause, 0 otherwise
+check_entering_pause:
+    ld a, #ff                   ; read pause key state in bit 1 of #FFFF port
+    in a, (#ff)                 ; ...
     ret
 
 
 ; OUT -  A = 1 if we are entering menu, A = 2 if we are leaving menu, A = 0 otherwise
 ; OUT -  F - garbage
-check_magic_hold: 
-    ld a, #ff                   ; read magic key state in bit 7 of #FE port
-    in a, (#fe)                 ; ...
-    bit 7, a                    ; check key is hold
-    jr z, .is_hold              ; yes?
+check_entering_menu: 
+    ld a, #ff                   ; read magic key state in bit 0 of #FFFF port
+    in a, (#ff)                 ; ...
+    bit 0, a                    ; check key is hold
+    jr nz, .is_hold             ; yes?
 .not_hold:
     ld a, (var_magic_leave_cnt) ; leave_counter++
     inc a                       ; ...
@@ -187,15 +326,21 @@ check_magic_hold:
 
 ; OUT - AF - garbage
 ; OUT - BC - garbage
-check_magic_delay:
-    ld c, MENU_HOLDCHECK_DELAY
+delay_10ms:
+    ld c, 7
     ld a, (cfg.clock)
     or a
     jr z, .loop
-    ld c, MENU_HOLDCHECK_DELAY*2
+    ld c, 9
     dec a
     jr z, .loop
-    ld c, MENU_HOLDCHECK_DELAY*4
+    ld c, 11
+    dec a
+    jr z, .loop
+    ld c, 7*2
+    dec a
+    jr z, .loop
+    ld c, 7*4
 .loop:
     ld a, c
 .loop_outer:
@@ -223,14 +368,27 @@ get_im2_handler:
     ret
 
 
-save:
-.mute_saa1099:
+mute_saa1099:
     ld bc, #ffff       ; select saa register
     ld a, #1c          ; ...
     out (c), a         ; ...
     ld b, #fe          ; mute
     xor a              ; ...
     out (c), a         ; ...
+    ret
+
+save:
+.mute_gs:
+    ld a, (var_ext_presence) ; if (no_ext_pcb || gs_is_disabled) - skip gs
+    or a                     ; ...this is required to be compatible with DivIDE
+    jr z, .mute_saa1099      ; ...which uses same port #bb
+    ld a, (cfgext.gs)        ; ...
+    or a                     ; ...
+    jr z, .mute_saa1099      ; ...
+    ld a, #fa                ; send command Out zero_to_zero
+    out (#bb), a             ; ...
+.mute_saa1099:
+    call mute_saa1099
 .save_ay:
     ld hl, var_save_ay ; select first AY chip in TurboSound
     ld a, #ff          ; ...
@@ -287,11 +445,20 @@ restore:
     ldir
 .restore_ay:
     ld hl, var_save_ay+16 ; select second AY chip in TurboSound
-    ld a, #fe          ; ...
+    ld a, #fe             ; ...
     call .restore_ay_sub
-    ld hl, var_save_ay ; select first AY chip in TurboSound
-    ld a, #ff          ; ...
+    ld hl, var_save_ay    ; select first AY chip in TurboSound
+    ld a, #ff             ; ...
     call .restore_ay_sub
+.restore_gs:
+    ld a, (var_ext_presence) ; if (no_ext_pcb || gs_is_disabled) - skip gs
+    or a                     ; ...this is required to be compatible with DivIDE
+    jr z, .restore_ret       ; ...which uses same port #bb
+    ld a, (cfgext.gs)        ; ...
+    or a                     ; ...
+    jr z, .restore_ret       ; ...
+    ld a, #60                ; send command Get Song Position
+    out (#bb), a             ; ...
 .restore_ret:
     ret
 
@@ -313,6 +480,16 @@ restore:
     ret
 
 
+enter_pause:
+    ld a, 1
+    ld (var_pause_flag), a
+    jr main  
+
+enter_menu:
+    xor a
+    ld (var_pause_flag), a
+    jr main
+
 ; Main program
 main:
     push de
@@ -330,23 +507,45 @@ main:
     ld (var_input_key), a
     ld (var_input_key_last), a
     ld (var_input_key_hold_timer), a
+    ld (var_pause_is_released), a
     ld (var_menu_current_item), a
     ld (var_menu_animate_cnt), a
 
     call save
-    call menu_init
+    ld a, (var_pause_flag)
+    or a
+    jr z, .menu_init
 
-.loop:
+.pause_init:
+    call pause_init
+.pause_loop:
+    ei
+    halt
+    call pause_process
+    ld a, (var_exit_flag)
+    or a
+    jr z, .pause_loop
+    jr .wait_for_keys_release
+
+.menu_init:
+    call check_initialized
+    jr z, .menu_init1
+    call init_default_config
+    call detect_ext_board
+    call load_config
+    call save_initialized
+.menu_init1:
+    call menu_init
+.menu_loop:
     ei
     halt
     call input_process          ; B = 32 if exit key pressed
     bit 5, b
     jr nz, .wait_for_keys_release
-
     call menu_process
     ld a, (var_exit_flag)
     or a
-    jr z, .loop
+    jr z, .menu_loop
 
 .wait_for_keys_release:
     ei
@@ -354,6 +553,10 @@ main:
     call input_process           ; B = 0 if no keys pressed
     xor a
     or b
+    jr nz, .wait_for_keys_release
+    ld a, #ff                    ; read magic/pause keys state
+    in a, (#ff)                  ; ...
+    and #03                      ; ...
     jr nz, .wait_for_keys_release
 
 .leave:
@@ -389,6 +592,7 @@ main:
     include config.asm
     include draw.asm
     include input.asm
+    include pause.asm
     include menu.asm
     include menu_structure.asm
     include font.asm
@@ -406,23 +610,7 @@ Readout_vector EQU #F008
     ORG #D500
 var_save_screen: .6912 DB 0
     ORG #F020
-var_save_ay: .32 DB 0
-var_save_ulaplus: DB 0
-var_sp_reg: DW 0
-var_int_vector: DW 0
-var_magic_enter_cnt: DB 0
-var_magic_leave_cnt: DB 0
-var_exit_flag: DB 0
-var_exit_reboot: DB 0
-var_input_key: DB 0
-var_input_key_last: DB 0
-var_input_key_hold_timer: DB 0
-var_menu_current_item: DB 0
-var_menu_animate_cnt: DB 0
-
-cfg CFG_T
-cfg_saved CFG_T
-cfg_initialized: DB #B1, #5B, #00, #B5
+    include variables.asm
 
     ORG #FFBE
 Stack_top:

@@ -136,8 +136,7 @@ always @(posedge clk or negedge rst_n) begin
                 `PS2_PGDN:      key2_pgdn <= is_press;
 
                 `PS2_F5:        key_magic <= is_press;
-                `PS2_F11:       key_pause <= 1'b0;
-                `PS2_F12:       key_pause <= 1'b1;
+                `PS2_F12:       key_pause <= is_press;
                 `PS2_DELETE:    key2_del <= is_press;
 
                 `PS2_KP_8:      joy_up <= is_press;
