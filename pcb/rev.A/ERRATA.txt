@@ -3,3 +3,4 @@
 - R14 should be 82 Ohm
 - R19 should be 200 Ohm
 - R20, R22, R25 should be ??? (TODO) Ohm
+- X1 - 28MHz
