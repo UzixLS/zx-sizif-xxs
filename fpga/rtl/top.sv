@@ -368,7 +368,7 @@ mixer mixer0(
     .sd_r0(soundrive_r0),
     .sd_r1(soundrive_r1),
 
-    .ay_acb(panning == PANNING_ABC),
+    .ay_acb(panning == PANNING_ACB),
     .mono(panning == PANNING_MONO),
 
     .dac_l(snd_l),
