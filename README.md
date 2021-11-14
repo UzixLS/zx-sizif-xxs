@@ -8,7 +8,7 @@ Smallest FPGA-based ZX Spectrum clone with real Z80.
 * PS/2 keyboard
 * Pentagon, Spectrum 128K and Spectrum 48K timings
 * Altera EP1C3T100 FPGA
-* Real Z80 in 3.5MHz, 7MHz (no-wait turbo) and 14MHz (turbo with wait-states) modes
+* Real Z80 in 3.5MHz, 4.4MHz, 5.2MHz, 7MHz modes
 * 512K RAM
 * TurboSound with switchable stereo ABC/ACB/mono output
 * Integrated DivMMC, 1x microSD socket

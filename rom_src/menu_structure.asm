@@ -190,7 +190,7 @@ menu_machine_cb:
 
 menu_clock_cb:
     ld a, (cfg.clock)
-    ld c, 4
+    ld c, 3
     call menu_handle_press
     ld (cfg.clock), a
     ld bc, #03ff
