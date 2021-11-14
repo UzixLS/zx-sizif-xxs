@@ -34,7 +34,7 @@ module zx_ula(
 
     input sd_cd,
     input sd_miso_tape_in,
-    output sd_mosi,
+    output sd_mosi_tape_out,
     output reg sd_sck,
     output reg sd_cs
 );
@@ -409,7 +409,7 @@ divmmc divmmc0(
     .ramwr_mask(div_ramwr_mask),
     .cpuwait(div_wait)
 );
-assign sd_mosi = (~sd_cd)? sd_mosi0 : tape_out;
+assign sd_mosi_tape_out = (divmmc_en == DIVMMC_OFF)? tape_out : sd_mosi0;
 
 
 /* ULAPLUS */

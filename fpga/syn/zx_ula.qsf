@@ -112,7 +112,7 @@ set_location_assignment PIN_38 -to sd_cd
 set_location_assignment PIN_39 -to sd_cs
 set_location_assignment PIN_40 -to sd_miso_tape_in
 set_location_assignment PIN_41 -to sd_sck
-set_location_assignment PIN_42 -to sd_mosi
+set_location_assignment PIN_42 -to sd_mosi_tape_out
 set_location_assignment PIN_47 -to vd[2]
 set_location_assignment PIN_48 -to vd[0]
 set_location_assignment PIN_49 -to vd[7]
