@@ -35,16 +35,16 @@ wire [WIDTH-1:0] dac_next_l =
     {ay_a0, 1'b0} +
     {ay_a1, 1'b0} +
     (ay_acb? ay_c0 : ay_b0) +
-    (ay_acb? ay_c1 : ay_b1) +
+    ay_b1 +
     {beeper, tape_out, tape_in, 7'b000000}
     ;
 wire [WIDTH-1:0] dac_next_r =
     {sd_r0, 1'b0} +
     {sd_r1, 1'b0} +
     (ay_acb? {ay_b0, 1'b0} : {ay_c0, 1'b0}) +
-    (ay_acb? {ay_b1, 1'b0} : {ay_c1, 1'b0}) +
+    {ay_c1, 1'b0} +
     (ay_acb? ay_c0 : ay_b0) +
-    (ay_acb? ay_c1 : ay_b1) +
+    ay_b1 +
     {beeper, tape_out, tape_in, 7'b000000}
     ;
 wire [WIDTH-1:0] dac_next_mono =
