@@ -3480,8 +3480,6 @@ Connection ~ 11725 2050
 Wire Wire Line
 	11375 2050 11725 2050
 NoConn ~ 11175 6475
-Text Notes 9700 3775 0    39   Italic 0
-R5 270\nR14 82\nR19 200\nR7 0
 Wire Bus Line
 	4925 675  3225 675 
 $Comp
@@ -3591,4 +3589,6 @@ Wire Bus Line
 	3600 3075 3600 6475
 Wire Bus Line
 	625  675  625  4025
+Text Notes 9650 3950 0    39   Italic 0
+R5 200\nR14 0\nR19 200\n\ndo not install:\nR20, R21, R22,\nR23, R24, R25,\nC18, C19, Q1
 $EndSCHEMATC

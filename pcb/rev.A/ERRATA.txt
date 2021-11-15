@@ -1,6 +1,5 @@
-- Incorrect Q1 pinout
-- R7 should be 0 Ohm
-- R14 should be 82 Ohm
-- R19 should be 200 Ohm
-- R20, R22, R25 should be ??? (TODO) Ohm
 - X1 - 28MHz
+- R5 should be 200
+- R14 should be 0
+- R19 should be 200
+- do not install: R20, R21, R22, R23, R24, R25, C18, C19, Q1

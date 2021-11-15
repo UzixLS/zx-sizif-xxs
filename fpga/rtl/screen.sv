@@ -7,9 +7,9 @@ module screen(
     input machine_t machine,
     input [2:0] border,
 
-    output reg [2:0] r,
-    output reg [2:0] g,
-    output reg [1:0] b,
+    output reg [5:0] r,
+    output reg [5:0] g,
+    output reg [5:0] b,
     output reg vsync,
     output reg hsync,
     output reg csync,
@@ -287,14 +287,20 @@ always @(posedge clk28) begin
     if (blank)
         {g, r, b} = 0;
     else if (up_en) begin
-        g = pixel? up_ink0[7:5] : up_paper0[7:5];
-        r = pixel? up_ink0[4:2] : up_paper0[4:2];
-        b = pixel? up_ink0[1:0] : up_paper0[1:0];
+        g[5:3] = pixel? up_ink0[7:5] : up_paper0[7:5];
+        r[5:3] = pixel? up_ink0[4:2] : up_paper0[4:2];
+        b[5:4] = pixel? up_ink0[1:0] : up_paper0[1:0];
+        g[2:0] = g[5:3];
+        r[2:0] = r[5:3];
+        b[3:0] = {b[5:4], b[5:4]};
     end
     else begin
-        {g[2], r[2], b[1]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
-        {g[1], r[1], b[0]} = {g[2] & attr[6], r[2] & attr[6], b[1] & attr[6]};
-        {g[0], r[0]} = {g[2], r[2]};
+        {g[5], r[5], b[5]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
+        {g[4], r[4], b[4]} = {g[5], r[5], b[5]};
+        {g[3], r[3], b[3]} = attr[6]? {g[5], r[5], b[5]} : 3'b000;
+        {g[2], r[2], b[2]} = {g[3], r[3], b[3]};
+        {g[1], r[1], b[1]} = {g[3], r[3], b[3]};
+        {g[0], r[0], b[0]} = {g[3], r[3], b[3]};
     end
 end
 

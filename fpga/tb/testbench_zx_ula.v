@@ -93,12 +93,7 @@ zx_ula zx_ula1(
     .sd_mosi_tape_out(sd_mosi_miso),
     .sd_miso_tape_in(sd_mosi_miso),
     .ps2_clk(),
-    .ps2_dat(),
-    .csync(),
-    .luma(),
-    .chroma(),
-    .snd_l(),
-    .snd_r()
+    .ps2_dat()
     );
 
 

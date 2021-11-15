@@ -22,9 +22,8 @@ module zx_ula(
     output reg n_int,
     output n_nmi,
 
-    output reg [5:0] luma,
-    output reg [2:0] chroma,
-    output reg csync,
+    output [7:0] composite,
+    input [1:0] reserv,
 
     output snd_l,
     output snd_r,
@@ -41,10 +40,15 @@ module zx_ula(
 
 /* CLOCK */
 wire clk28 = clk_in;
-wire clk40;
-wire clk20;
+wire clk168;
 wire rst_n;
-pll pll0(.inclk0(clk_in), .c0(clk40), .c1(clk20), .locked(rst_n));
+pll pll0(.inclk0(clk_in), .c0(clk168), .locked(rst_n));
+reg [1:0] clk168_en42_cnt = 0;
+reg clk168_en42;
+always @(posedge clk168) begin
+    clk168_en42 <= clk168_en42_cnt == 2'b00;
+    clk168_en42_cnt <= clk168_en42_cnt + 1'b1;
+end
 
 
 /* SHARED DEFINITIONS */
@@ -104,9 +108,8 @@ end
 /* SCREEN CONTROLLER */
 wire blink;
 wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0]};
-wire [2:0] r, g;
-wire [1:0] b;
-wire hsync;
+wire [5:0] r, g, b;
+wire hsync, vsync, csync0;
 wire screen_contention, port_ff_active;
 wire [14:0] screen_addr;
 wire [5:0] up_ink_addr, up_paper_addr;
@@ -124,8 +127,8 @@ screen screen0(
     .r(r),
     .g(g),
     .b(b),
-    .csync(csync),
-    .vsync(),
+    .csync(csync0),
+    .vsync(vsync),
     .hsync(hsync),
 
     .fetch_allow((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait),
@@ -157,21 +160,17 @@ screen screen0(
 
 
 /* VIDEO OUTPUT */
-always @*
-    luma <= 2*r + 5*g + b;
-
-wire [2:0] chroma0;
-chroma_gen #(.CLK_FREQ(40_000_000)) chroma_gen1(
-    .cg_clock(clk40),
-    .cg_rgb({|g,|r,|b}),
-    .cg_hsync(hsync),
-    .cg_enable(1'b1),
-    .cg_pnsel(1'b0),
-    .cg_out(chroma0)
+vencode vencode(
+    .clk(clk168),
+    .clk_en(clk168_en42),
+    .videoR(r),
+    .videoG(g),
+    .videoB(b),
+    .videoHS_n(hsync),
+    .videoVS_n(vsync),
+    .videoPS_n(csync0),
+    .videoV(composite)
 );
-assign chroma[0] = (chroma0[1])? chroma0[0] : 1'bz;
-assign chroma[1] = (chroma0[2])? chroma0[0] : 1'bz;
-assign chroma[2] = (chroma0[2])? chroma0[0] : 1'bz;
 
 
 /* PS/2 KEYBOARD */
