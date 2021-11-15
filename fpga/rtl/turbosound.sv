@@ -10,8 +10,6 @@ module turbosound(
     output [7:0] d_out,
     output d_out_active,
 
-    input pause,
-
     output [7:0] ay_a0,
     output [7:0] ay_b0,
     output [7:0] ay_c0,
@@ -49,7 +47,7 @@ reg [1:0] ay_ck;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         ay_ck <= 0;
-    else if (ck35 && en && !pause)
+    else if (ck35)
         ay_ck <= ay_ck + 1'b1;
     else
         ay_ck[1] <= 0;
@@ -59,41 +57,33 @@ end
 wire [7:0] ay_dout0, ay_dout1;
 YM2149 ym2149_0(
     .CLK(clk28),
-    .ENA(ay_ck[1]),
-    .RESET_H(~rst_n),
-    .I_SEL_L(1'b1),
-    .I_DA(bus.d_reg),
-    .O_DA(ay_dout0),
-    .I_REG(1'b0),
-    .busctrl_addr(ay_bc1 & ay_bdir & ~ay_sel),
-    .busctrl_we(~ay_bc1 & ay_bdir & ~ay_sel),
-    .ctrl_aymode(1'b1),
-    .port_a_i(8'hff),
-    .port_b_i(8'hff),
-    .port_a_o(),
-    .port_b_o(),
-    .O_AUDIO_A(ay_a0),
-    .O_AUDIO_B(ay_b0),
-    .O_AUDIO_C(ay_c0)
+    .CE(ay_ck[1]),
+    .RESET(~rst_n),
+    .A8(~ay_sel),
+    .BDIR(ay_bdir),
+    .BC(ay_bc1),
+    .DI(bus.d_reg),
+    .DO(ay_dout0),
+    .SEL(1'b0),
+    .MODE(1'b1),
+    .CHANNEL_A(ay_a0),
+    .CHANNEL_B(ay_b0),
+    .CHANNEL_C(ay_c0)
     );
 YM2149 ym2149_1(
     .CLK(clk28),
-    .ENA(ay_ck[1]),
-    .RESET_H(~rst_n || !en_ts),
-    .I_SEL_L(1'b1),
-    .I_DA(bus.d_reg),
-    .O_DA(ay_dout1),
-    .I_REG(1'b0),
-    .busctrl_addr(ay_bc1 & ay_bdir & ay_sel),
-    .busctrl_we(~ay_bc1 & ay_bdir & ay_sel),
-    .ctrl_aymode(1'b1),
-    .port_a_i(8'hff),
-    .port_b_i(8'hff),
-    .port_a_o(),
-    .port_b_o(),
-    .O_AUDIO_A(ay_a1),
-    .O_AUDIO_B(ay_b1),
-    .O_AUDIO_C(ay_c1)
+    .CE(ay_ck[1]),
+    .RESET(~rst_n || !en_ts),
+    .A8(ay_sel),
+    .BDIR(ay_bdir),
+    .BC(ay_bc1),
+    .DI(bus.d_reg),
+    .DO(ay_dout1),
+    .SEL(1'b0),
+    .MODE(1'b0),
+    .CHANNEL_A(ay_a1),
+    .CHANNEL_B(ay_b1),
+    .CHANNEL_C(ay_c1)
     );
 
 
