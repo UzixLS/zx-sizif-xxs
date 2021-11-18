@@ -1,4 +1,4 @@
-REVISION = zx_ula
+REVISION = rev_A
 
 .PHONY: build sof2jic program_sof program_jic clean report
 
@@ -6,7 +6,10 @@ build:
 	quartus_sh --no_banner --flow compile zx_ula -c ${REVISION}
 
 sof2jic:
-	quartus_cpf -c sof2jic.cof	
+	cp -f "output/${REVISION}.sof" output/zx_ula.sof
+	quartus_cpf -c sof2jic.cof
+	mv output/zx_ula.jic "output/${REVISION}.jic"
+	rm output/zx_ula.sof
 
 program_sof:
 	quartus_pgm --no_banner --mode=jtag -o "P;output/${REVISION}.sof"
