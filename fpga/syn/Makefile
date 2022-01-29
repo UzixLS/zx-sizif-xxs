@@ -1,4 +1,5 @@
-REVISION = rev_A
+REV = A
+REVISION = rev_${REV}
 
 .PHONY: build sof2jic program_sof program_jic clean report
 

@@ -1,13 +1,16 @@
 OUTDIR=out_new
+REV=A
+
+.PHONY: all build_rev clean pipeline pipeline_sof
 
 all:
 	mkdir -p ${OUTDIR}/
-	${MAKE} build_rev REV=A
+	${MAKE} REV=A build_rev
 
 build_rev:
-	${MAKE} -C rom_src/ REV=${REV} clean all
-	${MAKE} -C rom/ REV=${REV} clean all
-	${MAKE} -C fpga/syn/ REVISION=rev_${REV} clean build sof2jic
+	${MAKE} REV=${REV} -C rom_src/ clean all
+	${MAKE} REV=${REV} -C rom/ clean all
+	${MAKE} REV=${REV} -C fpga/syn/ clean build sof2jic
 	cp fpga/syn/output/rev_${REV}.jic ${OUTDIR}/rev_${REV}.jic
 
 clean:
@@ -16,3 +19,14 @@ clean:
 	${MAKE} -C fpga/tb/ clean
 	${MAKE} -C rom_src/ clean
 	${MAKE} -C rom/ clean
+
+pipeline:
+	${MAKE} REV=${REV} -C rom_src/
+	${MAKE} REV=${REV} -C rom/
+	${MAKE} REV=${REV} -C fpga/syn/ build report sof2jic program_jic program_sof
+
+pipeline_sof:
+	${MAKE} REV=${REV} -C rom_src/
+	${MAKE} REV=${REV} -C fpga/syn/ build report program_sof
+
+-include Makefile.local
