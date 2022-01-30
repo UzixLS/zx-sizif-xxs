@@ -117,7 +117,8 @@ end
 
 
 /* PORT #1FFD */
-wire port_1ffd_cs = bus.ioreq && bus.a_reg == 16'h1FFD && (machine == MACHINE_S3 || magic_map);
+wire port_1ffd_cs = bus.ioreq && bus.a_reg[15:12] == 4'b0001 && !bus.a_reg[1] &&
+                    (machine == MACHINE_S3 || magic_map);
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         port_1ffd <= 0;
