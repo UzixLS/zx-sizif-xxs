@@ -232,7 +232,7 @@ wire div_automap;
 wire [7:0] magic_dout;
 wire magic_dout_active;
 wire magic_mode, magic_map;
-wire joy_sinclair, up_en, covox_en, soundrive_en;
+wire joy_sinclair, up_en, ay_en, covox_en, soundrive_en;
 panning_t panning;
 divmmc_t divmmc_en;
 magic magic0(
@@ -263,6 +263,7 @@ magic magic0(
     .panning(panning),
     .divmmc_en(divmmc_en),
     .ulaplus_en(up_en),
+    .ay_en(ay_en),
     .covox_en(covox_en),
     .soundrive_en(soundrive_en)
 );
@@ -316,7 +317,7 @@ turbosound turbosound0(
     .rst_n(n_rstcpu),
     .clk28(clk28),
     .ck35(ck35),
-    .en(1'b1),
+    .en(ay_en),
     .en_ts(1'b1),
 
     .bus(bus),

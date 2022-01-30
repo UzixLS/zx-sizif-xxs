@@ -27,6 +27,7 @@ module magic(
     output reg joy_sinclair,
     output divmmc_t divmmc_en,
     output reg ulaplus_en,
+    output reg ay_en,
     output reg covox_en,
     output reg soundrive_en
 );
@@ -81,6 +82,7 @@ always @(posedge clk28 or negedge rst_n) begin
         joy_sinclair <= 0;
         divmmc_en <= DIVMMC_NOOS;
         ulaplus_en <= 1'b1;
+        ay_en <= 1'b1;
         covox_en <= 1'b1;
         soundrive_en <= 1'b1;
     end
@@ -91,6 +93,7 @@ always @(posedge clk28 or negedge rst_n) begin
         8'h03: turbo <= turbo_t'(bus.d_reg[2:0]);
         8'h04: panning <= panning_t'(bus.d_reg[1:0]);
         8'h07: joy_sinclair <= bus.d_reg[0];
+        8'h08: ay_en <= bus.d_reg[0];
         8'h09: divmmc_en <= divmmc_t'(bus.d_reg[1:0]);
         8'h0a: ulaplus_en <= bus.d_reg[0];
         8'h0b: {soundrive_en, covox_en} <= bus.d_reg[1:0];
