@@ -232,7 +232,7 @@ wire div_automap;
 wire [7:0] magic_dout;
 wire magic_dout_active;
 wire magic_mode, magic_map;
-wire joy_sinclair, up_en, covox_en, sd_en;
+wire joy_sinclair, up_en, covox_en, soundrive_en;
 panning_t panning;
 divmmc_t divmmc_en;
 magic magic0(
@@ -264,7 +264,7 @@ magic magic0(
     .divmmc_en(divmmc_en),
     .ulaplus_en(up_en),
     .covox_en(covox_en),
-    .sd_en(sd_en)
+    .soundrive_en(soundrive_en)
 );
 
 
@@ -338,7 +338,7 @@ soundrive soundrive0(
     .rst_n(usrrst_n),
     .clk28(clk28),
     .en_covox(covox_en),
-    .en_soundrive(sd_en),
+    .en_soundrive(soundrive_en),
 
     .bus(bus),
 
@@ -347,6 +347,7 @@ soundrive soundrive0(
     .ch_r0(soundrive_r0),
     .ch_r1(soundrive_r1)
 );
+
 
 /* SOUND MIXER */
 mixer mixer0(
@@ -396,7 +397,7 @@ divmmc divmmc0(
     .sd_mosi(sd_mosi0),
     .sd_sck(sd_sck),
     .sd_cs(sd_cs),
-    
+
     .rammap(port_dffd[4] | port_1ffd[0]),
     .magic_mode(magic_mode),
     .magic_map(magic_map),
@@ -478,7 +479,6 @@ asmi asmi0(
 
 /* MEMORY CONTROLLER */
 memcontrol memcontrol0(
-    .rst_n(rst_n),
     .clk28(clk28),
     .bus(bus),
     .va(va),

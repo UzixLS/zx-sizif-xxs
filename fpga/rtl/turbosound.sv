@@ -24,8 +24,8 @@ reg ay_bc1;
 reg ay_sel;
 wire ay_rd0 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b0;
 wire ay_rd1 = bus.rd && ay_bc1 == 1'b1 && ay_bdir == 1'b0 && ay_sel == 1'b1;
-wire port_bffd = bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[1] == 0;
-wire port_fffd = bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[14] == 1'b1 && bus.a_reg[1] == 0;
+wire port_bffd = en && bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[1] == 0;
+wire port_fffd = en && bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[14] == 1'b1 && bus.a_reg[1] == 0;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         ay_bc1 <= 0;
@@ -33,8 +33,8 @@ always @(posedge clk28 or negedge rst_n) begin
         ay_sel <= 0;
     end
     else begin
-        ay_bc1  <= en && port_fffd;
-        ay_bdir <= en && port_bffd && bus.wr;
+        ay_bc1  <= port_fffd;
+        ay_bdir <= port_bffd && bus.wr;
         if (!en_ts)
             ay_sel <= 0;
         else if (bus.ioreq && port_fffd && bus.wr && bus.d_reg[7:3] == 5'b11111)

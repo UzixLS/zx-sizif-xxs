@@ -28,7 +28,7 @@ module magic(
     output divmmc_t divmmc_en,
     output reg ulaplus_en,
     output reg covox_en,
-    output reg sd_en
+    output reg soundrive_en
 );
 
 reg magic_unmap_next;
@@ -82,7 +82,7 @@ always @(posedge clk28 or negedge rst_n) begin
         divmmc_en <= DIVMMC_NOOS;
         ulaplus_en <= 1'b1;
         covox_en <= 1'b1;
-        sd_en <= 1'b1;
+        soundrive_en <= 1'b1;
     end
     else if (config_cs && bus.wr) case (bus.a_reg[15:8])
         8'h00: magic_reboot <= bus.d_reg[0];
@@ -93,7 +93,7 @@ always @(posedge clk28 or negedge rst_n) begin
         8'h07: joy_sinclair <= bus.d_reg[0];
         8'h09: divmmc_en <= divmmc_t'(bus.d_reg[1:0]);
         8'h0a: ulaplus_en <= bus.d_reg[0];
-        8'h0b: {sd_en, covox_en} <= bus.d_reg[1:0];
+        8'h0b: {soundrive_en, covox_en} <= bus.d_reg[1:0];
     endcase
 end
 

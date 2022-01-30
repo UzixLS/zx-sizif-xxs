@@ -1,7 +1,6 @@
 import common::*;
 
 module memcontrol(
-    input rst_n,
     input clk28,
     cpu_bus bus,
     output [18:0] va,
@@ -45,25 +44,18 @@ module memcontrol(
 
 /* MEMORY CONTROLLER */
 reg romreq, ramreq, ramreq_wr;
-always @(posedge clk28 or negedge rst_n) begin
-    if (!rst_n) begin
-        romreq = 1'b0;
-        ramreq = 1'b0;
-        ramreq_wr = 1'b0;
-    end
-    else begin
-        romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
-            (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
-        ramreq = bus.mreq && !bus.rfsh && !romreq;
-        ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
-    end
+always @(posedge clk28) begin
+    romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
+        (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
+    ramreq = bus.mreq && !bus.rfsh && !romreq;
+    ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
 end
 
 assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_fetch) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
 assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b0 : 1'b1;
 
 /* VA[18:13] map
- * 00xxxx 128Kb of roms
+ * 00xxxx 112Kb of roms
  * 00111x 16Kb of magic ram
  * 01xxxx 128Kb of divmmc memory
  * 10xxxx 128Kb of extended ram (via port dffd)

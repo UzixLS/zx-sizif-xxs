@@ -82,10 +82,11 @@ end
 
 
 /* PORT #7FFD */
+reg lock_7ffd;
 wire port_7ffd_cs = bus.ioreq && bus.a_reg[1] == 0 && bus.a_reg[15] == 0 &&
                     (bus.a_reg[14] == 1'b1 || (!magic_map && machine != MACHINE_S3)) &&
-                    (machine != MACHINE_S48 || magic_map);
-reg lock_7ffd;
+                    (machine != MACHINE_S48 || magic_map) &&
+                    (lock_7ffd == 0 || port_dffd[4] == 1'b1);
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         rampage128 <= 0;
@@ -93,7 +94,7 @@ always @(posedge clk28 or negedge rst_n) begin
         rompage128 <= 0;
         lock_7ffd <= 0;
     end
-    else if (port_7ffd_cs && bus.wr && (lock_7ffd == 0 || port_dffd[4] == 1'b1)) begin
+    else if (port_7ffd_cs && bus.wr) begin
         rampage128 <= bus.d_reg[2:0];
         screenpage <= bus.d_reg[3];
         rompage128 <= bus.d_reg[4];
