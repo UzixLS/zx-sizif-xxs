@@ -28,7 +28,7 @@ _reserv2   DB 0
 _reserv3   DB 0
 joystick   DB 0
 ay         DB 1
-divmmc     DB 2
+sd         DB 2
 ulaplus    DB 1
 dac        DB 3
     ENDS

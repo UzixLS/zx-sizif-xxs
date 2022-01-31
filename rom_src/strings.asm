@@ -75,11 +75,14 @@ str_joystick_kempston_end:
 str_joystick_sinclair: DB "Sinclair",0
 str_joystick_sinclair_end:
 
+str_sd: DB "SD card",0
+str_sd_end:
+
 str_divmmc: DB "DivMMC",0
 str_divmmc_end:
 
-str_divmmc_noos: DB "NO OS",0
-str_divmmc_noos_end:
+str_zc3e: DB "ZC/+3e",0
+str_zc3e_end:
 
 str_ulaplus: DB "ULA+",0
 str_ulaplus_end

@@ -237,17 +237,16 @@ init_cpld:
 
 
 detect_sd_card:
-    ld a, #ff                   ; read sd_cd state in bit 2 of #FFFF port
-    in a, (#ff)                 ; ...
-    bit 2, a                    ; check sd_cd == 0 (card is insert)
+    in a, (#77)                 ; read sd_cd state from ZC status port
+    bit 0, a                    ; check sd_cd == 0 (card is insert)
     jr z, .is_insert            ; yes?
 .no_card:
-    xor a                       ; divmmc = OFF
-    ld (cfg_saved.divmmc), a    ; ...
+    xor a                       ; sd = OFF
+    ld (cfg_saved.sd), a        ; ...
     ret
 .is_insert:
-    ld a, 1                     ; divmmc = ON
-    ld (cfg_saved.divmmc), a    ; ...
+    ld a, 1                     ; sd = divmmc
+    ld (cfg_saved.sd), a        ; ...
     ret
 
 

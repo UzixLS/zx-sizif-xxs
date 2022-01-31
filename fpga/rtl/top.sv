@@ -234,7 +234,8 @@ wire magic_dout_active;
 wire magic_mode, magic_map;
 wire joy_sinclair, up_en, ay_en, covox_en, soundrive_en;
 panning_t panning;
-divmmc_t divmmc_en;
+wire divmmc_en, zc_en;
+
 magic magic0(
     .rst_n(n_rstcpu),
     .clk28(clk28),
@@ -249,7 +250,6 @@ magic magic0(
 
     .magic_button(ps2_key_magic),
     .pause_button(ps2_key_pause),
-    .sd_cd(sd_cd),
     .div_automap(div_automap),
 
     .magic_mode(magic_mode),
@@ -262,6 +262,7 @@ magic magic0(
     .joy_sinclair(joy_sinclair),
     .panning(panning),
     .divmmc_en(divmmc_en),
+    .zc_en(zc_en),
     .ulaplus_en(up_en),
     .ay_en(ay_en),
     .covox_en(covox_en),
@@ -387,13 +388,15 @@ divmmc divmmc0(
     .clk28(clk28),
     .ck14(ck14),
     .ck7(ck7),
-    .en(divmmc_en == DIVMMC_ON || divmmc_en == DIVMMC_NOOS),
-    .en_hooks(divmmc_en == DIVMMC_ON),
+    .en(divmmc_en),
+    .en_hooks(divmmc_en),
+    .en_zc(zc_en),
 
     .bus(bus),
     .d_out(div_dout),
     .d_out_active(div_dout_active),
 
+    .sd_cd(sd_cd),
     .sd_miso(sd_miso_tape_in),
     .sd_mosi(sd_mosi0),
     .sd_sck(sd_sck),
@@ -410,7 +413,7 @@ divmmc divmmc0(
     .ramwr_mask(div_ramwr_mask),
     .cpuwait(div_wait)
 );
-assign sd_mosi_tape_out = (divmmc_en == DIVMMC_OFF)? tape_out : sd_mosi0;
+assign sd_mosi_tape_out = (!divmmc_en && !zc_en)? tape_out : sd_mosi0;
 
 
 /* ULAPLUS */
@@ -498,7 +501,7 @@ memcontrol memcontrol0(
     .port_1ffd(port_1ffd),
     .port_dffd(port_dffd),
     .rampage_ext(rampage_ext),
-    .divmmc_en(divmmc_en != DIVMMC_OFF),
+    .divmmc_en(divmmc_en),
     .div_ram(div_ram),
     .div_map(div_map),
     .div_ramwr_mask(div_ramwr_mask),
