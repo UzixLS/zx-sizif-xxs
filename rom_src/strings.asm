@@ -1,14 +1,7 @@
     DB 0
 
-    IFDEF SIZIFXXS
 str_sizif: DB "SIZIF-XXS",0
 str_sizif_end:
-    ENDIF
-
-    IFDEF SIZIF512
-str_sizif: DB "SIZIF-512",0
-str_sizif_end:
-    ENDIF
 
 str_pause DB " PAUSE ",0
 str_pause_end:
@@ -82,18 +75,6 @@ str_joystick_kempston_end:
 str_joystick_sinclair: DB "Sinclair",0
 str_joystick_sinclair_end:
 
-str_rom48: DB "48K ROM",0
-str_rom48_end:
-
-str_rom48_default: DB "Default",0
-str_rom48_default_end:
-
-str_rom48_lg: DB "     LG",0
-str_rom48_lg_end:
-
-str_rom48_opense: DB " OpenSE",0
-str_rom48_opense_end:
-
 str_divmmc: DB "DivMMC",0
 str_divmmc_end:
 
@@ -114,12 +95,3 @@ str_dac_sd_end
 
 str_dac_covoxsd: DB "Covox+SD",0
 str_dac_covoxsd_end
-
-str_tsfm: DB "TSFM+MIDI",0
-str_tsfm_end
-
-str_saa: DB "SAA1099",0
-str_saa_end
-
-str_gs: DB "GS",0
-str_gs_end

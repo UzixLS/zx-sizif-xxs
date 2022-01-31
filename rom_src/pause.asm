@@ -1,4 +1,6 @@
 pause_init:
+    xor a
+    ld (var_pause_is_released), a
     ld d, PAUSE_BODY_ATTR
     ld c, PAUSE_X
     ld b, PAUSE_Y
@@ -17,7 +19,7 @@ pause_init:
     ret
 
 pause_process:
-    ld a, #ff                   ; read pause key state in bit 1 of #FFFF port
+    xor a                       ; read pause key state in bit 1 of #00FF port
     in a, (#ff)                 ; ...
     bit 1, a                    ; check key is hold
     jr nz, .is_hold             ; yes?

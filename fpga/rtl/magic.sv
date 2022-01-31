@@ -87,8 +87,7 @@ always @(posedge clk28 or negedge rst_n) begin
         soundrive_en <= 1'b1;
     end
     else if (config_cs && bus.wr) case (bus.a_reg[15:8])
-        8'h00: magic_reboot <= bus.d_reg[0];
-        8'h01: magic_beeper <= bus.d_reg[0];
+        8'h01: {magic_reboot, magic_beeper} <= bus.d_reg[1:0];
         8'h02: machine <= machine_t'(bus.d_reg[2:0]);
         8'h03: turbo <= turbo_t'(bus.d_reg[2:0]);
         8'h04: panning <= panning_t'(bus.d_reg[1:0]);
@@ -106,7 +105,7 @@ always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         config_rd <= 0;
     else
-        config_rd <= config_cs && bus.rd && bus.a_reg[15:8] == 8'hFF;
+        config_rd <= config_cs && bus.rd && bus.a_reg[15:8] == 8'h00;
 end
 
 

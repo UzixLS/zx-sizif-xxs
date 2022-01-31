@@ -4,6 +4,9 @@ items DB
 height DB
 y_row DB
 y_pixel DB
+width DB
+x DB
+x_logo DB
     ENDS
 
     STRUCT MENUENTRY_T
@@ -13,40 +16,31 @@ callback DW
 reserved DW
     ENDS
 
-    MACRO MENUDESCR label_addr, items
-        MENU_T (label_addr) (items) (items+2) ((24-(items+2))/2) (((24-(items+2))/2)*8)
+    MACRO MENU_DEF width
+        MENU_T {
+            ($+MENU_T)
+            (((.end-$)/MENUENTRY_T-1))
+            (((.end-$)/MENUENTRY_T-1)+2)
+            ( (24-(((.end-$)/MENUENTRY_T-1)+2))/2)
+            (((24-(((.end-$)/MENUENTRY_T-1)+2))/2)*8)
+            (width)
+            ( (32-width)/2)
+            (((32-width)/2)+width-6)
+        }
     ENDM
 
-.menu:
-    MENUENTRY_T str_machine     menu_machine_value_cb     menu_machine_cb
+menudefault: MENU_DEF 20
     MENUENTRY_T str_cpu         menu_clock_value_cb       menu_clock_cb
+    MENUENTRY_T str_machine     menu_machine_value_cb     menu_machine_cb
     MENUENTRY_T str_panning     menu_panning_value_cb     menu_panning_cb
     MENUENTRY_T str_joystick    menu_joystick_value_cb    menu_joystick_cb
-    IFNDEF SIZIFXXS
-    MENUENTRY_T str_rom48       menu_rom48_value_cb       menu_rom48_cb
-    ENDIF
     MENUENTRY_T str_divmmc      menu_divmmc_value_cb      menu_divmmc_cb
     MENUENTRY_T str_ulaplus     menu_ulaplus_value_cb     menu_ulaplus_cb
     MENUENTRY_T str_dac         menu_dac_value_cb         menu_dac_cb
     MENUENTRY_T str_exit        menu_exit_value_cb        menu_exit_cb
     MENUENTRY_T 0
-!menu: MENUDESCR .menu, ($-.menu)/MENUENTRY_T-1
+.end:
 
-.menuext:
-    MENUENTRY_T str_machine     menu_machine_value_cb     menu_machine_cb
-    MENUENTRY_T str_cpu         menu_clock_value_cb       menu_clock_cb
-    MENUENTRY_T str_panning     menu_panning_value_cb     menu_panning_cb
-    MENUENTRY_T str_joystick    menu_joystick_value_cb    menu_joystick_cb
-    MENUENTRY_T str_rom48       menu_rom48_value_cb       menu_rom48_cb
-    MENUENTRY_T str_divmmc      menu_divmmc_value_cb      menu_divmmc_cb
-    MENUENTRY_T str_ulaplus     menu_ulaplus_value_cb     menu_ulaplus_cb
-    MENUENTRY_T str_dac         menu_dac_value_cb         menu_dac_cb
-    MENUENTRY_T str_tsfm        menu_tsfm_value_cb        menu_tsfm_cb
-    MENUENTRY_T str_saa         menu_saa_value_cb         menu_saa_cb
-    MENUENTRY_T str_gs          menu_gs_value_cb          menu_gs_cb
-    MENUENTRY_T str_exit        menu_exit_value_cb        menu_exit_cb
-    MENUENTRY_T 0
-!menuext: MENUDESCR .menuext, ($-.menuext)/MENUENTRY_T-1
 
 
 menu_machine_value_cb:
@@ -72,19 +66,6 @@ menu_clock_value_cb:
 
 menu_panning_value_cb:
     ld ix, .values_table
-    ld a, (var_ext_presence) ; if (ext_board && tsfm) - use ABC instead of ACB panning
-    or a                     ; ...
-    jr z, .no_tsfm           ; ...
-    ld a, (cfgext.tsfm)      ; ...
-    or a                     ; ...
-    jr z, .no_tsfm           ; ...
-    ld a, (cfg.panning)
-    cp a, 2                  ; if (panning == acb) panning = abc
-    jr c, .get               ; ...
-    dec a                    ; ...
-.get
-    jp menu_value_get
-.no_tsfm:
     ld a, (cfg.panning)
     jp menu_value_get
 .values_table:
@@ -99,15 +80,6 @@ menu_joystick_value_cb:
 .values_table:
     DW str_joystick_kempston_end-2
     DW str_joystick_sinclair_end-2
-
-menu_rom48_value_cb:
-    ld ix, .values_table
-    ld a, (cfg.rom48)
-    jp menu_value_get
-.values_table:
-    DW str_rom48_default_end-2
-    DW str_rom48_lg_end-2
-    DW str_rom48_opense_end-2
 
 menu_divmmc_value_cb:
     ld ix, .values_table
@@ -136,31 +108,6 @@ menu_dac_value_cb:
     DW str_dac_sd_end-2
     DW str_dac_covoxsd_end-2
 
-menu_tsfm_value_cb:
-    ld ix, .values_table
-    ld a, (cfgext.tsfm)
-    jp menu_value_get
-.values_table:
-    DW str_off_end-2
-    DW str_on_end-2
-
-menu_saa_value_cb:
-    ld ix, .values_table
-    ld a, (cfgext.saa)
-    jp menu_value_get
-.values_table:
-    DW str_off_end-2
-    DW str_on_end-2
-
-menu_gs_value_cb:
-    ld ix, .values_table
-    ld a, (cfgext.gs)
-    jp menu_value_get
-.values_table:
-    DW str_off_end-2
-    DW str_on_end-2
-
-
 menu_exit_value_cb:
     ld ix, .values_table
     ld a, (var_exit_reboot)
@@ -177,6 +124,7 @@ menu_value_get:
     ld l, (ix+0)
     ld h, (ix+1)
     ret
+
 
 
 menu_machine_cb:
@@ -198,19 +146,8 @@ menu_clock_cb:
     ret
 
 menu_panning_cb:
-    ld a, (var_ext_presence) ; if (ext_board && tsfm) - do not allow to set ACB panning
-    or a                     ; ...
-    jr z, .no_tsfm           ; ...
-    ld a, (cfgext.tsfm)      ; ...
-    or a                     ; ...
-    jr z, .no_tsfm           ; ...
-    ld a, (cfg.panning)      ; ...
-    ld c, 1                  ; ...
-    jr .load
-.no_tsfm:
     ld a, (cfg.panning)
     ld c, 2
-.load:
     call menu_handle_press
     ld (cfg.panning), a
     ld bc, #04ff
@@ -223,19 +160,6 @@ menu_joystick_cb:
     call menu_handle_press
     ld (cfg.joystick), a
     ld bc, #07ff
-    out (c), a
-    ret
-
-menu_rom48_cb:
-    ld a, (cfg.rom48)
-    IFDEF REV_C
-        ld c, 1
-    ELSE
-        ld c, 2
-    ENDIF
-    call menu_handle_press
-    ld (cfg.rom48), a
-    ld bc, #06ff
     out (c), a
     ret
 
@@ -263,33 +187,6 @@ menu_dac_cb:
     call menu_handle_press
     ld (cfg.dac), a
     ld bc, #0bff
-    out (c), a
-    ret
-
-menu_tsfm_cb:
-    ld a, (cfgext.tsfm)
-    ld c, 1
-    call menu_handle_press
-    ld (cfgext.tsfm), a
-    ld bc, #e1ff
-    out (c), a
-    ret
-
-menu_saa_cb:
-    ld a, (cfgext.saa)
-    ld c, 1
-    call menu_handle_press
-    ld (cfgext.saa), a
-    ld bc, #e2ff
-    out (c), a
-    ret
-
-menu_gs_cb:
-    ld a, (cfgext.gs)
-    ld c, 1
-    call menu_handle_press
-    ld (cfgext.gs), a
-    ld bc, #e3ff
     out (c), a
     ret
 
