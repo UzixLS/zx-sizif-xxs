@@ -239,7 +239,7 @@ always @(posedge clk28 or negedge rst_n) begin
         if (ck14) begin
             if (fetch)
                 fetch_step <= fetch_step + 1'b1;
-            fetch <= fetch_allow;
+            fetch <= fetch_next;
 
             if (fetch_attr)
                 attr_next <= fetch_data;

@@ -77,7 +77,7 @@ always @(posedge clk28 or negedge rst_n) begin
         bus.a_reg <= bus.a;
         bus.d_reg <= bus.d;
         bus_ioreq <= n_iorq == 1'b0 && n_m1 == 1'b1;
-        bus_memreq <= n_mreq == 1'b0;
+        bus_memreq <= n_mreq == 1'b0 && n_rfsh == 1'b1;
     end
     else begin
         if (n_iorq)

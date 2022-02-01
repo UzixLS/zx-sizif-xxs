@@ -107,7 +107,9 @@ assign vd[7:0] =
     div_dout_active? div_dout :
     turbosound_dout_active? turbosound_dout :
     ports_dout_active? ports_dout :
-    8'hFF;
+    (bus.m1 && bus.iorq)? 8'hFF :
+    bus.rd? 8'hFF :
+    {8{1'bz}};
 
 
 endmodule
