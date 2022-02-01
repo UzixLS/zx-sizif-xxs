@@ -78,23 +78,24 @@ always @(posedge clk28) begin
         {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} ;
 end
 
-reg [16:14] rom_a;
+reg [16:13] rom_a;
 always @(posedge clk28) begin
     rom_a <=
-        magic_map? 3'd2 :
-        div_map? 3'd3 :
-        (machine == MACHINE_S3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b0)? 3'd4 :
-        (machine == MACHINE_S3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b1)? 3'd5 :
-        (machine == MACHINE_S3 && port_1ffd[2] == 1'b1 && rompage128 == 1'b0)? 3'd6 :
-        (rompage128 == 1'b1)? 3'd1 :
-        3'd0;
+        magic_map? {3'd2, 1'b0} :
+        div_map? {3'd2, 1'b1} :
+        (machine == MACHINE_S3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b0)? {3'd4, bus.a[13]} :
+        (machine == MACHINE_S3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b1)? {3'd5, bus.a[13]} :
+        (machine == MACHINE_S3 && port_1ffd[2] == 1'b1 && rompage128 == 1'b0)? {3'd6, bus.a[13]} :
+        (machine == MACHINE_S48)? {3'd3, bus.a[13]} :
+        (rompage128 == 1'b1)? {3'd1, bus.a[13]} :
+        {3'd0, bus.a[13]};
 end
 
 assign va[18:0] =
     rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
     screen_fetch && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
     screen_fetch? {3'b111, screenpage, screen_addr} :
-    romreq? {2'b00, rom_a[16:14], bus.a[13], {13{1'bz}}} :
+    romreq? {2'b00, rom_a[16:13], {13{1'bz}}} :
     {ram_a[18:13], {13{1'bz}}};
 
 assign vd[7:0] =

@@ -497,12 +497,12 @@ wait_for_keys_release:
     include font.asm
     include strings.asm
 
-    DISPLAY "Free space: ",/D,#3FE8-$
-    ASSERT $ < #3FE8
+    DISPLAY "Free space: ",/D,#1FE8-$
+    ASSERT $ < #1FE8
 
 
 ; Just some string at the end of ROM
-    ORG #3FE8
+    ORG #1FE8
     DB 0,"End of Sizif Magic ROM",0
 
 ; Variables
@@ -526,4 +526,4 @@ Ulaplus_pallete:
 
 
     CSPECTMAP "main.map"
-    SAVEBIN "main.bin",0,16384
+    SAVEBIN "main.bin",0,8192
