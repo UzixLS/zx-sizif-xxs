@@ -179,7 +179,7 @@ begin
         vref + signed( Y1 + Y2 + Y3 ) when ( window_h = '1' and window_v = '1' ) else
         vref;
 
-    burstUV <= to_signed( 32, 8 ) & "000000" when ( window_c = '1' and window_v = '1' ) else
+    burstUV <= to_signed( 20, 8 ) & "000000" when ( window_c = '1' and window_v = '1' ) else
         ( others => '0' );
     prevU <= signed( U3 - U1 - U2 ) when ( window_h = '1' and window_v = '1' ) else 
         ( -burstUV );
