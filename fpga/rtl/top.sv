@@ -131,7 +131,7 @@ screen screen0(
     .vsync(vsync),
     .hsync(hsync),
 
-    .fetch_allow((!bus.iorq && !bus.mreq && !bus.m1) || bus.rfsh || clkwait),
+    .fetch_allow((!bus.iorq && !bus.mreq) || bus.rfsh || clkwait),
     .fetch(screen_fetch),
     .addr(screen_addr),
     .fetch_next(screen_fetch_next),
