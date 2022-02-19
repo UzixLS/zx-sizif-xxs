@@ -1,7 +1,7 @@
 ## Sizif-XXS
 Smallest FPGA-based ZX Spectrum clone with real Z80.
 
-[![photo](images/revA.small.webp)](images/revA.webp?raw=true)
+[![photo](images/revAB.small.webp)](images/revAB.webp?raw=true)
 
 ### Tech specs
 * 100x24.5mm PCB
