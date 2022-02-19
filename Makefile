@@ -1,11 +1,12 @@
 OUTDIR=out_new
-REV=A
+REV=B
 
 .PHONY: all build_rev clean pipeline pipeline_sof
 
 all:
 	mkdir -p ${OUTDIR}/
 	${MAKE} REV=A build_rev
+	${MAKE} REV=B build_rev
 
 build_rev:
 	${MAKE} REV=${REV} -C rom_src/ clean all

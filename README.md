@@ -47,5 +47,10 @@ Sizif have preinstalled esxDOS firmware, which provides ability to load TAP, TRD
 
 ### Changelog & current status
 * Rev.A - first release. Please note the [errata](pcb/rev.A/ERRATA.txt).
-
-**Work in progress!**
+* Rev.B:
+    * fixed all rev.A issues
+    * fixed "jailbars" on video output
+    * 0805 footprints replaced with 0603
+    * tape input moved slightly away to not to interfere with wide AV jack
+    * 3.5 jacks replaced with THT variant for better reliability
+    * changed ps/2 header orientation
