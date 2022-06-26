@@ -1,48 +1,48 @@
 ## Kicad
-pcb*/**/*-lib-table
-pcb*/**/*-cache
-pcb*/**/*-rescue.lib
-pcb*/**/*.sch-bak
-pcb*/**/*.kicad_pcb-bak
-pcb*/**/*.dcm
-pcb*/**/*.kicad_prl
-pcb*/**/*-backups/
-pcb*/**/*.xml
-pcb*/**/out/
-pcb*/rev*~*/
-pcb.*/
+/pcb*/**/*-lib-table
+/pcb*/**/*-cache
+/pcb*/**/*-rescue.lib
+/pcb*/**/*.sch-bak
+/pcb*/**/*.kicad_pcb-bak
+/pcb*/**/*.dcm
+/pcb*/**/*.kicad_prl
+/pcb*/**/*-backups/
+/pcb*/**/*.xml
+/pcb*/**/out/
 
 ## Quartus
-fpga/**/.qsys_edit/
-fpga/**/db/
-fpga/**/greybox_tmp/
-fpga/**/incremental_db/
-fpga/**/output/
-fpga/**/*.dpf
-fpga/**/*.cdf
-fpga/**/*.qws
-fpga/**/*.srf
-fpga/**/*.stp
-fpga/**/simulation/
-fpga.*/
+/fpga/**/.qsys_edit/
+/fpga/**/db/
+/fpga/**/greybox_tmp/
+/fpga/**/incremental_db/
+/fpga/**/output/
+/fpga/**/*.dpf
+/fpga/**/*.cdf
+/fpga/**/*.qws
+/fpga/**/*.srf
+/fpga/**/*.stp
+/fpga/**/simulation/
 
 ## Testbench
-fpga/tb/ivl_vhdl_work/
-fpga/tb/work/
-fpga/tb/*.gtkw
-fpga/tb/*.vcd
-fpga/tb/*.bin
-fpga/tb/*.mem
-fpga/tb.*/
+/fpga/tb/ivl_vhdl_work/
+/fpga/tb/work/
+/fpga/tb/*.gtkw
+/fpga/tb/*.vcd
+/fpga/tb/*.bin
+/fpga/tb/*.mem
+
+## ROM
+/rom/sizif*.rom
+/rom/sizif*.hex
+/rom_src/*.bin
+/rom_src/*.hex
+/rom_src/*.map
+/rom_src/*.sna
+/rom_src.*/
 
 ## Etc.
+/out_new/
 *.bak
-*.*~
+*~
 *.sublime-*
-rom/sizif*.rom
-rom/sizif*.hex
-rom_src/*.bin
-rom_src/*.hex
-rom_src/*.map
-rom_src/*.sna
-rom_src.*/
+.vscode/
