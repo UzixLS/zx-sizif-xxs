@@ -273,7 +273,7 @@ end
 wire port_ff_attr = (machine == MACHINE_PENT) || hc[3:1] == 3'h6 || hc[3:1] == 3'h0;
 wire port_ff_bitmap = (hc[3] && hc[1]);
 assign port_ff_active = loading && (port_ff_attr || port_ff_bitmap);
-assign port_ff_data = 
+assign port_ff_data =
     port_ff_attr? attr_next :
     port_ff_bitmap? bitmap_next :
     8'hFF;
@@ -296,11 +296,11 @@ always @(posedge clk28) begin
     end
     else begin
         {g[5], r[5], b[5]} = (pixel ^ (attr[7] & blink))? attr[2:0] : attr[5:3];
-        {g[4], r[4], b[4]} = {g[5], r[5], b[5]};
-        {g[3], r[3], b[3]} = attr[6]? {g[5], r[5], b[5]} : 3'b000;
-        {g[2], r[2], b[2]} = {g[3], r[3], b[3]};
-        {g[1], r[1], b[1]} = {g[3], r[3], b[3]};
-        {g[0], r[0], b[0]} = {g[3], r[3], b[3]};
+        {g[4], r[4], b[4]} = attr[6]? {g[5], r[5], b[5]} : 3'b000;
+        {g[3], r[3], b[3]} = {g[5], r[5], b[5]};
+        {g[2], r[2], b[2]} = {g[4], r[4], b[4]};
+        {g[1], r[1], b[1]} = {g[4], r[4], b[4]};
+        {g[0], r[0], b[0]} = {g[5], r[5], b[5]};
     end
 end
 
