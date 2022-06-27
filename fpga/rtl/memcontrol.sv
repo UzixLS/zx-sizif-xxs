@@ -42,18 +42,6 @@ module memcontrol(
 );
 
 
-/* MEMORY CONTROLLER */
-reg romreq, ramreq, ramreq_wr;
-always @(posedge clk28) begin
-    romreq =  bus.mreq && !bus.rfsh && bus.a[14] == 0 && bus.a[15] == 0 &&
-        (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
-    ramreq = bus.mreq && !bus.rfsh && !romreq;
-    ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
-end
-
-assign n_vrd = ((((ramreq || romreq) && bus.rd) || screen_fetch) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
-assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b0 : 1'b1;
-
 /* VA[18:13] map
  * 00xxxx 112Kb of roms
  * 00111x 16Kb of magic ram
@@ -62,25 +50,15 @@ assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b
  * 11xxxx 128Kb of main ram
  */
 
-reg [18:13] ram_a;
+reg romreq, ramreq, ramreq_wr;
+reg [18:13] va_18_13;
 always @(posedge clk28) begin
-    ram_a <=
-        magic_map & bus.a[15] & bus.a[14]? {2'b00, 3'b111, bus.a[13]} :
-        magic_map? {3'b111, screenpage, bus.a[14:13]} :
-        div_map & ~bus.a[14] & ~bus.a[15] & bus.a[13]? {2'b01, div_page} :
-        div_map & ~bus.a[14] & ~bus.a[15]? {2'b01, 4'b0011} :
-        port_dffd[3] & bus.a[15]? {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} :
-        port_dffd[3] & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
-        (port_1ffd[2] == 1'b0 && port_1ffd[0] == 1'b1)? {2'b11, port_1ffd[1], bus.a[15], bus.a[14], bus.a[13]} :
-        (port_1ffd == 3'b101)? {2'b11, ~(bus.a[15] & bus.a[14]), bus.a[15], bus.a[14], bus.a[13]} :
-        (port_1ffd == 3'b111)? {2'b11, ~(bus.a[15] & bus.a[14]), (bus.a[15] | bus.a[14]), bus.a[14], bus.a[13]} :
-        bus.a[15] & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
-        {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} ;
-end
+    romreq =  bus.mreq && bus.a[15:14] == 2'b00 &&
+        (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
+    ramreq = bus.mreq && !romreq;
+    ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
 
-reg [16:13] rom_a;
-always @(posedge clk28) begin
-    rom_a <=
+    if (romreq) va_18_13 = {2'd0,
         magic_map? {3'd2, 1'b0} :
         div_map? {3'd2, 1'b1} :
         (machine == MACHINE_S3 && port_1ffd[2] == 1'b0 && rompage128 == 1'b0)? {3'd4, bus.a[13]} :
@@ -88,15 +66,24 @@ always @(posedge clk28) begin
         (machine == MACHINE_S3 && port_1ffd[2] == 1'b1 && rompage128 == 1'b0)? {3'd6, bus.a[13]} :
         (machine == MACHINE_S48)? {3'd3, bus.a[13]} :
         (rompage128 == 1'b1)? {3'd1, bus.a[13]} :
-        {3'd0, bus.a[13]};
+        {3'd0, bus.a[13]} };
+    else va_18_13 =
+        magic_map & bus.a[15] & bus.a[14]? {2'b00, 3'b111, bus.a[13]} :
+        magic_map? {3'b111, screenpage, bus.a[14:13]} :
+        div_map & ~bus.a[15] & ~bus.a[14] & bus.a[13]? {2'b01, div_page} :
+        div_map & ~bus.a[15] & ~bus.a[14]? {2'b01, 4'b0011} :
+        bus.a[15] & bus.a[14]? {1'b1, ~rampage_ext[0], rampage128, bus.a[13]} :
+        {2'b11, bus.a[14], bus.a[15], bus.a[14], bus.a[13]} ;
 end
+
+assign n_vrd = (((bus.mreq && bus.rd) || screen_fetch) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
+assign n_vwr = ((ramreq_wr && bus.wr && !screen_fetch) || rom2ram_ram_wren)? 1'b0 : 1'b1;
 
 assign va[18:0] =
     rom2ram_ram_wren? {2'b00, rom2ram_ram_address} :
     screen_fetch && snow? {3'b111, screenpage, screen_addr[14:8], {8{1'bz}}} :
     screen_fetch? {3'b111, screenpage, screen_addr} :
-    romreq? {2'b00, rom_a[16:13], {13{1'bz}}} :
-    {ram_a[18:13], {13{1'bz}}};
+    {va_18_13, {13{1'bz}}};
 
 assign vd[7:0] =
     ~n_vrd? {8{1'bz}} :
