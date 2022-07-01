@@ -3,8 +3,10 @@ Smallest FPGA-based ZX Spectrum clone with real Z80.
 
 [![photo](images/revAB.small.webp)](images/revAB.webp?raw=true)
 
+[![photo](images/zero-revA.small.webp)](images/zero-revA.webp?raw=true)
+
 ### Tech specs
-* 100x24.5mm PCB
+* Two PCB varians: 100x24.5mm (main version) and 65x30mm (Zero version) - both are functionally identical, differs only in size
 * PS/2 keyboard
 * Pentagon, Spectrum 128, Spectrum 48 and Spectrum +3e modes
 * Altera EP1C3T100 FPGA
@@ -54,3 +56,4 @@ Sizif have preinstalled esxDOS firmware, which provides ability to load TAP, TRD
     * tape input moved slightly away to not to interfere with wide AV jack
     * 3.5 jacks replaced with THT variant for better reliability
     * changed ps/2 header orientation
+* Zero Rev.A - first release of Zero version. Based on Rev.B of main pcb.

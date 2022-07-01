@@ -7,6 +7,7 @@ all:
 	mkdir -p ${OUTDIR}/
 	${MAKE} REV=A build_rev
 	${MAKE} REV=B build_rev
+	${MAKE} REV=zero_A build_rev
 
 build_rev:
 	${MAKE} REV=${REV} -C rom_src/ clean all
