@@ -17,7 +17,7 @@ module screen(
     input fetch_allow,
     output reg fetch,
     output fetch_next,
-    output [14:0] addr,
+    output reg [14:0] addr,
     input [7:0] fetch_data,
 
     output contention,
@@ -184,7 +184,7 @@ wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 1) && (hc0 < ((H
 wire screen_update = hc0[4:0] == 5'b10011;
 wire border_update = (hc0[4:0] == 5'b10011) || (machine == MACHINE_PENT && ck7);
 wire bitmap_shift = hc0[1:0] == 2'b11;
-wire next_addr = hc0[4:0] == 5'b10001;
+wire next_addr = hc0[4:0] == 5'b10000;
 
 reg [7:0] vaddr;
 reg [7:3] haddr;
@@ -214,18 +214,16 @@ reg [7:0] bitmap, attr, bitmap_next, attr_next;
 reg [7:0] up_ink0, up_paper0;
 
 reg fetch_step;
-wire fetch_bitmap = fetch && fetch_step == 2'd0;
-wire fetch_attr   = fetch && fetch_step == 2'd1;
+wire fetch_bitmap = fetch && fetch_step == 1'd0;
+wire fetch_attr   = fetch && fetch_step == 1'd1;
 assign fetch_next = loading && fetch_allow;
 
-assign addr = fetch_bitmap?
-    { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
-    { 5'b10110, vaddr[7:3], haddr[7:3] };
 assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
 assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
 
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
+        addr <= 0;
         fetch <= 0;
         fetch_step <= 0;
         attr <= 0;
@@ -237,6 +235,10 @@ always @(posedge clk28 or negedge rst_n) begin
     end
     else begin
         if (ck14) begin
+            addr <= ((fetch && fetch_step == 1'd1) || (!fetch && fetch_step == 1'b0))?
+                { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
+                { 5'b10110, vaddr[7:3], haddr[7:3] };
+
             if (fetch)
                 fetch_step <= fetch_step + 1'b1;
             fetch <= fetch_next;

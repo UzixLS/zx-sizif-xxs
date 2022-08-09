@@ -8,3 +8,10 @@ derive_clocks -period 14MHz
 
 set_multicycle_path -from {vencode:*|*} -to {vencode:*|*} -setup 4
 set_multicycle_path -from {vencode:*|*} -to {vencode:*|*} -hold 3
+
+# One screen read cycle = ~71ns. SRAM speed = 55ns
+# So we have about 16ns to setup control signals (n_vrd, n_vwr, va - 10ns) and read back data (vd - 6ns)
+set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports n_vrd] 10ns
+set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports n_vwr] 10ns
+set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports va[*]] 10ns
+set_max_delay -from [get_ports vd[*]] -to [get_pins -compatibility_mode screen0|*] 6ns
