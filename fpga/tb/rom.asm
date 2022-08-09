@@ -1,20 +1,22 @@
     DEVICE ZXSPECTRUM48
 
-    ORG #8000 // mapped #0000
+    ORG #0000
 Start:
     nop
-    jp #1000
+    jp Main
 
-    ORG #8038
+    ORG #0038
 Int1:
 	reti
 
-    ORG #8066
+    ORG #0066
 Nmi:
     retn
 
-    ORG #9000
+    ORG #1000
 Main:
+    jp #3D00
+
     im 2
     ei
 
@@ -35,23 +37,44 @@ Main:
     //ld b, #ff
     //ld hl, #4000
     //otir
-
-    jp #1fff
 Loop:
     halt
     jr Loop
 
 
-    ORG #C000 // mapped #0000
+    ORG #8000 // mapped #0000
+MagicROM_Start:
+    ld bc, #09ff ; divmmc = 1
+    ld a, 1      ; ...
+    out (c), a   ; ...
+    ld bc, #03ff ; cpu freq = 7mhz
+    ld a, 3      ; ...
+    out (c), a   ; ...
+    ld bc, #0000
+    push bc
+    jp #f008
+    ORG #F000
+MagicROM_ExitVector:
+    ret
+    ORG #F008
+MagicROM_ReadoutVector:
+    nop
+    ret
+
+    ORG #A000 // mapped #0000
 DivROM_Start:
     nop
-    ld bc, #3D00
+    ld bc, #1000
     push bc
     jp #1FFF
-    ORG #DFFF // mapped #1FFF
-    nop
+    ORG #BFFF // mapped #1FFF
+DivROM_ExitVector:
+    ret
     ORG #1D00 // mapped #3D00
-    jp #0000
+DivROM_EnterVector_TRDOS:
+    ld bc, #1000
+    push bc
+    jp #1FFF
 
 
     SAVEBIN "rom.bin",0,65536

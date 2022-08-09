@@ -214,7 +214,7 @@ cpucontrol cpucontrol0(
     .machine(machine),
     .screen_contention(screen_contention),
     .turbo(turbo),
-    .ext_wait_cycle(div_wait || up_active),
+    .ext_wait_cycle(div_wait),
     .init_done_in(init_done),
 
     .n_rstcpu(n_rstcpu),

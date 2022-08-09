@@ -16,7 +16,7 @@ module magic(
     input div_automap,
 
     output reg magic_mode,
-    output reg magic_map,
+    output magic_map,
 
     output reg magic_reboot,
     output reg magic_beeper,
@@ -34,11 +34,12 @@ module magic(
 
 reg magic_unmap_next;
 reg magic_map_next;
+reg magic_map0;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         n_nmi <= 1'b1;
         magic_mode <= 1'b1;
-        magic_map <= 1'b1;
+        magic_map0 <= 1'b1;
         magic_map_next <= 0;
         magic_unmap_next <= 0;
     end
@@ -49,25 +50,28 @@ always @(posedge clk28 or negedge rst_n) begin
             magic_mode <= 1'b1;
         end
 
-        if (magic_map && bus.memreq && bus.rd && bus.a_reg == 16'hf000 && !magic_map_next) begin
+        if (magic_map0 && bus.memreq && bus.rd && bus.a_reg == 16'hf000 && !magic_map_next) begin
             magic_unmap_next <= 1'b1;
             magic_mode <= 1'b0;
         end
-        else if (magic_map && bus.memreq && bus.rd && bus.a_reg == 16'hf008) begin
+        else if (magic_map0 && bus.memreq && bus.rd && bus.a_reg == 16'hf008) begin
             magic_unmap_next <= 1'b1;
             magic_map_next <= 1'b1;
         end
         else if (magic_unmap_next && !bus.memreq) begin
-            magic_map <= 1'b0;
+            magic_map0 <= 1'b0;
             magic_unmap_next <= 1'b0;
         end
         else if (magic_mode && bus.m1 && bus.memreq && (bus.a_reg == 16'h0066 || magic_map_next)) begin
             n_nmi <= 1'b1;
-            magic_map <= 1'b1;
+            magic_map0 <= 1'b1;
             magic_map_next <= 1'b0;
         end
     end
 end
+
+// this signal is critical for timings, so we're arming it as soon as possible
+assign magic_map = magic_map0 || (magic_mode && bus.m1 && bus.memreq && (bus.a_reg == 16'h0066 || magic_map_next) && !magic_unmap_next);
 
 
 /* MAGIC CONFIG */

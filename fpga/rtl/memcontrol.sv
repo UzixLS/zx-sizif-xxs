@@ -52,7 +52,7 @@ module memcontrol(
 
 reg romreq, ramreq, ramreq_wr;
 reg [18:13] va_18_13;
-always @(posedge clk28) begin
+always @(negedge clk28) begin
     romreq =  bus.mreq && bus.a[15:14] == 2'b00 &&
         (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
     ramreq = bus.mreq && !romreq;
