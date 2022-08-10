@@ -10,14 +10,15 @@ Smallest FPGA-based ZX Spectrum clone with real Z80.
 * PS/2 keyboard
 * Pentagon, Spectrum 128, Spectrum 48 and Spectrum +3e modes
 * Altera EP1C3T100 FPGA
-* Real Z80 in 3.5MHz, 4.4MHz, 5.2MHz, 7MHz modes
+* Real Z80 with 3.5MHz, 4.4MHz, 5.2MHz, 7MHz modes
 * 512K RAM
 * TurboSound with switchable stereo ABC/ACB/mono output
 * Integrated DivMMC and Z-Controller, 1x microSD socket
 * PAL video output (AV cable like in Raspberry Pi)
 * ULAplus
-* Mono covox (Pentagon standard)
-* SounDrive (4-channel stereo covox)
+* SpecDrum
+* Covox (Pentagon standard - port #FD)
+* SounDrive (4-channel stereo covox - ports #0F, #1F, #4F, #5F)
 * Tape input via 3.5" jack
 * USB 5V power supply
 
@@ -42,7 +43,7 @@ If you press Magic button for a short time, the standard NMI handler 'll be call
 | Alt | Joystick's fire |
 
 ### RAM
-Sizif contains 512K RAM. 128K available via 7FFDh port, 128K via DFFDh (Profi standart, most compatible with old 128K software) and 128K used for DivMMC. Remaining space used to store ROM.  Note that DFFDh port available only in Pentagon mode.
+Sizif contains 512K RAM. 128K available via 7FFDh port, 128K via DFFDh (Profi standart, most compatible with old 128K software) and 128K used for DivMMC. Remaining space used to store ROM. Note that DFFDh port available only in Pentagon mode.
 
 ### SD card
 Sizif have preinstalled esxDOS firmware, which provides ability to load TAP, TRD, SCL, Z80 files and save snapshots. To use this you should format SD cart to FAT32 or FAT16 and unpack latest esxDOS release ([link](http://www.esxdos.org/index.html)) to card. Also it's recommended to install Long Filename Browser ([link](https://spectrumcomputing.co.uk/forums/viewtopic.php?t=2553)) to card.
