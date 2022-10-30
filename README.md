@@ -34,8 +34,10 @@ If you press Magic button for a short time, the standard NMI handler 'll be call
 ### PS/2 keyboard buttons
 | Button | Function |
 | - | - |
-| F5 | Magic menu button |
-| F12 | Pause |
+| F1 | Pause |
+| F5 | Magic button |
+| F10 | Reboot |
+| F12 | Reboot |
 | Ctrl+Alt+Del | Reboot |
 | Ctrl+Alt+Backspace | Reboot |
 | Numpad 8, 2/5, 4, 6 | Joystick's up-down-left-right |
