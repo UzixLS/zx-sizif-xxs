@@ -1,5 +1,5 @@
 OUTDIR=out_new
-REV=B
+REV=zero_A
 
 .PHONY: all build_rev clean pipeline pipeline_sof
 

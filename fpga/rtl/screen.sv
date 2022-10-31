@@ -5,6 +5,7 @@ module screen(
     input clk28,
 
     input machine_t machine,
+    input turbo_t turbo,
     input [2:0] border,
 
     output reg [5:0] r,
@@ -17,7 +18,7 @@ module screen(
     input fetch_allow,
     output reg fetch,
     output fetch_next,
-    output reg [14:0] addr,
+    output [14:0] addr,
     input [7:0] fetch_data,
 
     output contention,
@@ -199,12 +200,16 @@ always @(posedge clk28 or negedge rst_n) begin
     end
 end
 
-reg loading;
+reg loading, loading_up;
 always @(posedge clk28 or negedge rst_n) begin
-    if (!rst_n)
+    if (!rst_n) begin
         loading <= 0;
-    else
+        loading_up <= 0;
+    end
+    else begin
         loading <= (vc < V_AREA) && (hc0 > 15) && (hc0 < (H_AREA<<2) + 17);
+        loading_up <= loading && (screen_update || loading_up);
+    end
 end
 
 
@@ -213,19 +218,25 @@ wire [7:0] attr_border = {2'b00, border[2:0], border[2:0]};
 reg [7:0] bitmap, attr, bitmap_next, attr_next;
 reg [7:0] up_ink0, up_paper0;
 
-reg fetch_step;
-wire fetch_bitmap = fetch && fetch_step == 1'd0;
-wire fetch_attr   = fetch && fetch_step == 1'd1;
-assign fetch_next = loading && fetch_allow;
+reg [1:0] fetch_cnt;
+localparam FETCH_CYCLES = 2'd2;
+assign fetch_next = loading && (fetch_allow || (|fetch_cnt && fetch_cnt != FETCH_CYCLES && turbo == TURBO_14));
 
-assign up_ink_addr = { attr_next[7:6], 1'b0, attr_next[2:0] };
-assign up_paper_addr = { attr_next[7:6], 1'b1, attr_next[5:3] };
+reg fetch_step;
+wire fetch_bitmap = fetch && fetch_step == 1'd0 && fetch_cnt == FETCH_CYCLES;
+wire fetch_attr   = fetch && fetch_step == 1'd1 && fetch_cnt == FETCH_CYCLES;
+
+assign addr = (fetch_step == 1'd0)?
+    { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
+    { 5'b10110, vaddr[7:3], haddr[7:3] };
+assign up_ink_addr = loading_up? { attr_next[7:6], 1'b0, attr_next[2:0] } : { 3'b0, attr_border[2:0] };
+assign up_paper_addr = loading_up? { attr_next[7:6], 1'b1, attr_next[5:3] } : { 3'b0, attr_border[2:0] };
 
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
-        addr <= 0;
         fetch <= 0;
         fetch_step <= 0;
+        fetch_cnt <= 0;
         attr <= 0;
         bitmap <= 0;
         attr_next <= 0;
@@ -234,23 +245,20 @@ always @(posedge clk28 or negedge rst_n) begin
         up_paper0 <= 0;
     end
     else begin
-        if (ck14) begin
-            addr <= ((fetch && fetch_step == 1'd1) || (!fetch && fetch_step == 1'b0))?
-                { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
-                { 5'b10110, vaddr[7:3], haddr[7:3] };
-
-            if (fetch)
-                fetch_step <= fetch_step + 1'b1;
-            fetch <= fetch_next;
-
-            if (fetch_attr)
+        fetch <= fetch_next;
+        if (fetch_cnt == FETCH_CYCLES) begin
+            if (fetch_step == 1'd1)
                 attr_next <= fetch_data;
-            else if (!loading)
-                attr_next <= attr_border;
-            if (fetch_bitmap)
+            if (fetch_step == 1'd0)
                 bitmap_next <= fetch_data;
-            else if (!loading)
-                bitmap_next <= 0;
+            fetch_step <= fetch_step + 1'b1;
+            fetch_cnt <= 0;
+        end
+        else if (fetch && fetch_next && !next_addr) begin
+            fetch_cnt <= fetch_cnt + 1'b1;
+        end
+        else begin
+            fetch_cnt <= 0;
         end
 
         if (screen_show && screen_update)

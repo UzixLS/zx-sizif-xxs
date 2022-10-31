@@ -60,7 +60,6 @@ wire magic_reboot, magic_beeper;
 wire up_active;
 wire clkwait;
 wire [2:0] rampage128;
-wire div_wait;
 wire init_done;
 wire screen_fetch, screen_fetch_next;
 
@@ -74,8 +73,8 @@ always @(posedge clk28 or negedge rst_n) begin
         bus_memreq <= 0;
     end
     else if (!screen_fetch && !screen_fetch_next) begin
-        bus.a_reg <= bus.a;
-        bus.d_reg <= bus.d;
+        bus.a_reg <= {a[15:13], va[12:0]};
+        bus.d_reg <= vd;
         bus_ioreq <= n_iorq == 1'b0 && n_m1 == 1'b1;
         bus_memreq <= n_mreq == 1'b0 && n_rfsh == 1'b1;
     end
@@ -86,16 +85,18 @@ always @(posedge clk28 or negedge rst_n) begin
             bus_memreq <= 0;
     end
 end
-assign bus.a = {a[15:13], va[12:0]};
-assign bus.d = vd;
-assign bus.iorq = ~n_iorq;
-assign bus.mreq = ~n_mreq;
-assign bus.m1 = ~n_m1;
-assign bus.rfsh = ~n_rfsh;
-assign bus.rd = ~n_rd;
-assign bus.wr = ~n_wr;
-assign bus.ioreq = bus_ioreq & ~n_iorq;
-assign bus.memreq = bus_memreq & ~n_mreq;
+always @(posedge clk168) begin
+    bus.a <= {a[15:13], va[12:0]};
+    bus.d <= vd;
+    bus.iorq <= ~n_iorq;
+    bus.mreq <= ~n_mreq;
+    bus.m1 <= ~n_m1;
+    bus.rfsh <= ~n_rfsh;
+    bus.rd <= ~n_rd;
+    bus.wr <= ~n_wr;
+end
+assign bus.ioreq = bus_ioreq & bus.iorq;
+assign bus.memreq = bus_memreq & bus.mreq;
 
 
 /* RESET */
@@ -122,6 +123,7 @@ screen screen0(
     .clk28(clk28),
 
     .machine(machine),
+    .turbo(turbo),
     .border(screen_border),
 
     .r(r),
@@ -131,7 +133,7 @@ screen screen0(
     .vsync(vsync),
     .hsync(hsync),
 
-    .fetch_allow((!bus.iorq && !bus.mreq) || bus.rfsh || clkwait),
+    .fetch_allow((!bus.iorq && !bus.mreq) || bus.rfsh || (clkwait && turbo == TURBO_NONE)),
     .fetch(screen_fetch),
     .addr(screen_addr),
     .fetch_next(screen_fetch_next),
@@ -212,9 +214,8 @@ cpucontrol cpucontrol0(
     .hc(hc),
     .rampage128(rampage128),
     .machine(machine),
-    .screen_contention(screen_contention),
     .turbo(turbo),
-    .ext_wait_cycle(div_wait),
+    .screen_contention(screen_contention),
     .init_done_in(init_done),
 
     .n_rstcpu(n_rstcpu),
@@ -411,8 +412,7 @@ divmmc divmmc0(
     .map(div_map),
     .automap(div_automap),
     .ram(div_ram),
-    .ramwr_mask(div_ramwr_mask),
-    .cpuwait(div_wait)
+    .ramwr_mask(div_ramwr_mask)
 );
 assign sd_mosi_tape_out = (!divmmc_en && !zc_en)? tape_out : sd_mosi0;
 

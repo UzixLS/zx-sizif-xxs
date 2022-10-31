@@ -15,3 +15,6 @@ set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports n_vr
 set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports n_vwr] 10ns
 set_max_delay -from [get_pins -compatibility_mode screen0|*] -to [get_ports va[*]] 10ns
 set_max_delay -from [get_ports vd[*]] -to [get_pins -compatibility_mode screen0|*] 6ns
+
+set_false_path -from * -to [get_ports {snd_l}]
+set_false_path -from * -to [get_ports {snd_r}]
