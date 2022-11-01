@@ -138,7 +138,7 @@ menu_machine_cb:
 
 menu_clock_cb:
     ld a, (cfg.clock)
-    ld c, 3
+    ld c, 4
     call menu_handle_press
     ld (cfg.clock), a
     ld bc, #03ff
@@ -232,4 +232,3 @@ menu_handle_press:
 .decrement_roll:
     ld a, c                 ; value = max
     ret
-
