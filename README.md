@@ -50,6 +50,11 @@ Sizif contains 512K RAM. 128K available via 7FFDh port, 128K via DFFDh (Profi st
 ### SD card
 Sizif have preinstalled esxDOS firmware, which provides ability to load TAP, TRD, SCL, Z80 files and save snapshots. To use this you should format SD cart to FAT32 or FAT16 and unpack latest esxDOS release ([link](http://www.esxdos.org/index.html)) to card. Also it's recommended to install Long Filename Browser ([link](https://spectrumcomputing.co.uk/forums/viewtopic.php?t=2553)) to card.
 
+### How to program
+There is two options:
+1. Program via JTAG connector using USB blaster and Quartus Programmer - use jic file from out folder.
+2. Program flash chip directly using TL866 or similar device - use bin file.
+
 ### Changelog & current status
 * Rev.A - first release. Please note the [errata](pcb/rev.A/ERRATA.txt).
 * Rev.B:

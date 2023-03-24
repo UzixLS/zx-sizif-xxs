@@ -12,6 +12,9 @@ sof2jic:
 	mv output/zx_ula.jic "output/${REVISION}.jic"
 	rm output/zx_ula.sof
 
+rbf2bin:
+	srec_cat output/rev_${REV}.rbf -binary -Bit_Reverse 2 -Byte_Swap 2 -o output/rev_${REV}.bin -binary
+
 program_sof:
 	quartus_pgm --no_banner --mode=jtag -o "P;output/${REVISION}.sof"
 
@@ -24,6 +27,6 @@ clean:
 report:
 	cat output/${REVISION}.*.smsg output/${REVISION}.*.rpt |grep -e Error -e Critical -e Warning |grep -v -e "Family doesn't support jitter analysis" -e "Force Fitter to Avoid Periphery Placement Warnings"
 
-export PATH:=/opt/quartus13.0sp1/quartus/bin:/cygdrive/c/Hwdev/quartus130sp1/quartus/bin:${PATH}
+export PATH:=/opt/quartus13.0sp1/quartus/bin:/cygdrive/c/Hwdev/quartus130sp1/quartus/bin:/cygdrive/c/Dev/srec/bin/:${PATH}
 
 -include Makefile.local

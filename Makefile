@@ -12,11 +12,12 @@ all:
 build_rev:
 	${MAKE} REV=${REV} -C rom_src/ clean all
 	${MAKE} REV=${REV} -C rom/ clean all
-	${MAKE} REV=${REV} -C fpga/syn/ clean build sof2jic
+	${MAKE} REV=${REV} -C fpga/syn/ clean build sof2jic rbf2bin
 	cp fpga/syn/output/rev_${REV}.jic ${OUTDIR}/rev_${REV}.jic
+	cat fpga/syn/output/rev_${REV}.bin rom/sizif.rom > ${OUTDIR}/rev_${REV}.bin
 
 clean:
-	rm -f "${OUTDIR}"
+	rm -rf "${OUTDIR}"
 	${MAKE} -C fpga/syn/ clean
 	${MAKE} -C fpga/tb/ clean
 	${MAKE} -C rom_src/ clean
