@@ -6,6 +6,7 @@ endpackage
 
 
 interface cpu_bus();
+    reg [15:0] a_raw;
     reg [15:0] a;
     reg [7:0] d;
     reg iorq;
@@ -15,8 +16,6 @@ interface cpu_bus();
     reg rd;
     reg wr;
 
-    reg [15:0] a_reg;
-    reg [7:0] d_reg;
     wire ioreq;
     wire memreq;
 endinterface

@@ -19,8 +19,8 @@ module divmmc(
     output reg sd_cs,
 
     input rammap,
-    input magic_mode,
-    input magic_map,
+    input mask_hooks,
+    input mask_nmi_hook,
 
     output reg [3:0] page,
     output map,
@@ -31,31 +31,30 @@ module divmmc(
 );
 
 
-reg automap0;
-reg automap_next;
+reg automap0, automap_next;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         automap_next <= 0;
         automap0 <= 0;
     end
-    else if (bus.m1 && bus.memreq && !magic_map) begin
+    else if (bus.m1 && bus.memreq && !mask_hooks) begin
         if (!en_hooks || !en || rammap) begin
             automap_next <= 0;
         end
-        else if (bus.a_reg[15:3] == 13'h3FF) begin // exit vectors 1FF8-1FFF
+        else if (bus.a[15:3] == 13'h3FF) begin // exit vectors 1FF8-1FFF
             automap_next <= 0;
         end
         else if (
-                bus.a_reg == 16'h0000 || // power-on/reset/rst0/software restart
-                bus.a_reg == 16'h0008 || // syntax error
-                bus.a_reg == 16'h0038 || // im1 interrupt/rst #38
-                (bus.a_reg == 16'h0066 && !magic_mode) || // nmi routine
-                bus.a_reg == 16'h04C6 || // tape save routine
-                bus.a_reg == 16'h0562    // tape load and verify routine
+                (bus.a == 16'h0000) || // power-on/reset/rst0/software restart
+                (bus.a == 16'h0008) || // syntax error
+                (bus.a == 16'h0038) || // im1 interrupt/rst #38
+                (bus.a == 16'h0066 && !mask_nmi_hook) || // nmi routine
+                (bus.a == 16'h04C6) || // tape save routine
+                (bus.a == 16'h0562)    // tape load and verify routine
                 ) begin
             automap_next <= 1'b1;
         end
-        else if (bus.a_reg[15:8] == 8'h3D) begin // tr-dos mapping area
+        else if (bus.a[15:8] == 8'h3D) begin // tr-dos mapping area
             automap_next <= 1'b1;
             automap0 <= 1'b1;
         end
@@ -66,15 +65,15 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 // #3Dxx entrypoint is critical for timings, so we're arming 'map' signal as soon as possible
-assign automap = automap0 || (bus.m1 && bus.memreq && !magic_map && en_hooks && en && !rammap && bus.a_reg[15:8] == 8'h3D);
+assign automap = automap0 || (bus.m1 && bus.memreq && !mask_hooks && en_hooks && en && !rammap && bus.a[15:8] == 8'h3D);
 
 
 reg conmem, mapram;
-wire port_e3_cs = en && bus.ioreq && bus.a_reg[7:0] == 8'hE3;
-wire port_e7_cs = en && bus.ioreq && bus.a_reg[7:0] == 8'hE7;
-wire port_eb_cs = en && bus.ioreq && bus.a_reg[7:0] == 8'hEB;
-wire port_57_cs = en_zc && bus.ioreq && bus.a_reg[7:0] == 8'h57;
-wire port_77_cs = en_zc && bus.ioreq && bus.a_reg[7:0] == 8'h77;
+wire port_e3_cs = en && bus.ioreq && bus.a[7:0] == 8'hE3;
+wire port_e7_cs = en && bus.ioreq && bus.a[7:0] == 8'hE7;
+wire port_eb_cs = en && bus.ioreq && bus.a[7:0] == 8'hEB;
+wire port_57_cs = en_zc && bus.ioreq && bus.a[7:0] == 8'h57;
+wire port_77_cs = en_zc && bus.ioreq && bus.a[7:0] == 8'h77;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         page <= 0;
@@ -84,15 +83,15 @@ always @(posedge clk28 or negedge rst_n) begin
     end
     else begin
         if (port_e3_cs && bus.wr) begin
-            page <= bus.d_reg[3:0];
-            mapram <= bus.d_reg[6] | mapram;
-            conmem <= bus.d_reg[7];
+            page <= bus.d[3:0];
+            mapram <= bus.d[6] | mapram;
+            conmem <= bus.d[7];
         end
         if (port_e7_cs && bus.wr) begin
-            sd_cs <= bus.d_reg[0];
+            sd_cs <= bus.d[0];
         end
         else if (port_77_cs && bus.wr) begin
-            sd_cs <= bus.d_reg[1] | ~bus.d_reg[0];
+            sd_cs <= bus.d[1] | ~bus.d[0];
         end
     end
 end
@@ -138,7 +137,7 @@ always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         spi_reg <= 0;
     else if ((port_eb_cs || port_57_cs) && bus.wr)
-        spi_reg <= bus.d_reg;
+        spi_reg <= bus.d;
     else if (spi_cnt[3] == 1'b0 && ck7)
         spi_reg[7:0] <= {spi_reg[6:0], sd_miso};
 end
@@ -151,12 +150,12 @@ end
 
 assign map = automap | conmem;
 assign ram =
-    (automap && bus.a[13]) ||
-    (conmem && bus.a[13]) ||
+    (automap && bus.a_raw[13]) ||
+    (conmem && bus.a_raw[13]) ||
     (!conmem && automap && mapram);
 assign ramwr_mask =
-    !bus.a[15] && !bus.a[14] &&
-    (!bus.a[13] || page == 4'b0011) &&
+    !bus.a_raw[15] && !bus.a_raw[14] &&
+    (!bus.a_raw[13] || page == 4'b0011) &&
     !conmem && automap && mapram;
 
 assign d_out_active = zc_rd | spi_rd;

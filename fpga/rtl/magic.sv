@@ -32,14 +32,16 @@ module magic(
     output reg soundrive_en
 );
 
+localparam magic_on_start = 1'b1;
+
 reg magic_unmap_next;
 reg magic_map_next;
 reg magic_map0;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         n_nmi <= 1'b1;
-        magic_mode <= 1'b1;
-        magic_map0 <= 1'b1;
+        magic_mode <= magic_on_start;
+        magic_map0 <= magic_on_start;
         magic_map_next <= 0;
         magic_unmap_next <= 0;
     end
@@ -50,11 +52,11 @@ always @(posedge clk28 or negedge rst_n) begin
             magic_mode <= 1'b1;
         end
 
-        if (magic_map0 && bus.memreq && bus.rd && bus.a_reg == 16'hf000 && !magic_map_next) begin
+        if (magic_map0 && bus.memreq && bus.rd && bus.a == 16'hf000 && !magic_map_next) begin
             magic_unmap_next <= 1'b1;
             magic_mode <= 1'b0;
         end
-        else if (magic_map0 && bus.memreq && bus.rd && bus.a_reg == 16'hf008) begin
+        else if (magic_map0 && bus.memreq && bus.rd && bus.a == 16'hf008) begin
             magic_unmap_next <= 1'b1;
             magic_map_next <= 1'b1;
         end
@@ -62,7 +64,7 @@ always @(posedge clk28 or negedge rst_n) begin
             magic_map0 <= 1'b0;
             magic_unmap_next <= 1'b0;
         end
-        else if (magic_mode && bus.m1 && bus.memreq && (bus.a_reg == 16'h0066 || magic_map_next)) begin
+        else if (magic_mode && bus.m1 && bus.memreq && (bus.a == 16'h0066 || magic_map_next)) begin
             n_nmi <= 1'b1;
             magic_map0 <= 1'b1;
             magic_map_next <= 1'b0;
@@ -71,11 +73,11 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 // this signal is critical for timings, so we're arming it as soon as possible
-assign magic_map = magic_map0 || (magic_mode && bus.m1 && bus.memreq && (bus.a_reg == 16'h0066 || magic_map_next) && !magic_unmap_next);
+assign magic_map = magic_map0 || (magic_mode && bus.m1 && bus.memreq && (bus.a == 16'h0066 || magic_map_next) && !magic_unmap_next);
 
 
 /* MAGIC CONFIG */
-wire config_cs = magic_map && bus.ioreq && bus.a_reg[7:0] == 8'hFF;
+wire config_cs = magic_map && bus.ioreq && bus.a[7:0] == 8'hFF;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         magic_reboot <= 0;
@@ -91,16 +93,16 @@ always @(posedge clk28 or negedge rst_n) begin
         covox_en <= 1'b1;
         soundrive_en <= 1'b1;
     end
-    else if (config_cs && bus.wr) case (bus.a_reg[15:8])
-        8'h01: {magic_reboot, magic_beeper} <= bus.d_reg[1:0];
-        8'h02: machine <= machine_t'(bus.d_reg[2:0]);
-        8'h03: turbo <= turbo_t'(bus.d_reg[2:0]);
-        8'h04: panning <= panning_t'(bus.d_reg[1:0]);
-        8'h07: joy_sinclair <= bus.d_reg[0];
-        8'h08: ay_en <= bus.d_reg[0];
-        8'h09: {zc_en, divmmc_en} <= bus.d_reg[1:0];
-        8'h0a: ulaplus_en <= bus.d_reg[0];
-        8'h0b: {soundrive_en, covox_en} <= bus.d_reg[1:0];
+    else if (config_cs && bus.wr) case (bus.a[15:8])
+        8'h01: {magic_reboot, magic_beeper} <= bus.d[1:0];
+        8'h02: machine <= machine_t'(bus.d[2:0]);
+        8'h03: turbo <= turbo_t'(bus.d[2:0]);
+        8'h04: panning <= panning_t'(bus.d[1:0]);
+        8'h07: joy_sinclair <= bus.d[0];
+        8'h08: ay_en <= bus.d[0];
+        8'h09: {zc_en, divmmc_en} <= bus.d[1:0];
+        8'h0A: ulaplus_en <= bus.d[0];
+        8'h0B: {soundrive_en, covox_en} <= bus.d[1:0];
     endcase
 end
 
@@ -110,7 +112,7 @@ always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         config_rd <= 0;
     else
-        config_rd <= config_cs && bus.rd && bus.a_reg[15:8] == 8'h00;
+        config_rd <= config_cs && bus.rd && bus.a[15:8] == 8'h00;
 end
 
 

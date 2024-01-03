@@ -27,8 +27,8 @@ module turbosound(
 reg ay_bdir;
 reg ay_bc1;
 reg ay_sel;
-wire port_bffd = en && bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[1] == 0;
-wire port_fffd = en && bus.ioreq && bus.a_reg[15] == 1'b1 && bus.a_reg[14] == 1'b1 && bus.a_reg[1] == 0;
+wire port_bffd = en && bus.ioreq && bus.a[15] == 1'b1 && bus.a[1] == 0;
+wire port_fffd = en && bus.ioreq && bus.a[15] == 1'b1 && bus.a[14] == 1'b1 && bus.a[1] == 0;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         ay_bc1 <= 0;
@@ -40,8 +40,8 @@ always @(posedge clk28 or negedge rst_n) begin
         ay_bdir <= port_bffd && bus.wr;
         if (!en_ts)
             ay_sel <= 0;
-        else if (bus.ioreq && port_fffd && bus.wr && bus.d_reg[7:3] == 5'b11111)
-            ay_sel <= bus.d_reg[0];
+        else if (bus.ioreq && port_fffd && bus.wr && bus.d[7:3] == 5'b11111)
+            ay_sel <= bus.d[0];
     end
 end
 
@@ -65,7 +65,7 @@ YM2149 ym2149_0(
     .A8(~ay_sel),
     .BDIR(ay_bdir),
     .BC(ay_bc1),
-    .DI(bus.d_reg),
+    .DI(bus.d),
     .DO(ay_dout0),
     .SEL(1'b0),
     .MODE(1'b1),
@@ -80,7 +80,7 @@ YM2149 ym2149_1(
     .A8(ay_sel),
     .BDIR(ay_bdir),
     .BC(ay_bc1),
-    .DI(bus.d_reg),
+    .DI(bus.d),
     .DO(ay_dout1),
     .SEL(1'b0),
     .MODE(1'b0),

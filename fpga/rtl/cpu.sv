@@ -1,5 +1,5 @@
 import common::*;
-module cpucontrol(
+module cpu(
     input rst_n,
     input clk28,
     input clk14,
@@ -12,16 +12,16 @@ module cpucontrol(
 
     input [8:0] vc,
     input [8:0] hc,
-    input screen_contention,
-    input [2:0] rampage128,
+    input video_contention,
+    input [2:0] ram_page128,
     input machine_t machine,
     input turbo_t turbo,
     input init_done_in,
 
-    output reg n_rstcpu,
+    output reg n_rstcpu_out,
     output reg clkcpu,
     output clkcpu_ck,
-    output clkwait,
+    output clkcpu_stall,
     output reg n_int,
     output n_int_next,
     output snow
@@ -29,19 +29,19 @@ module cpucontrol(
 
 
 /* CONTENTION */
-wire iorq_contended = bus.iorq && (~bus.a_reg[0] || (~bus.a_reg[1] && ~bus.a[15] && bus.wr)) && (machine != MACHINE_S3);
+wire iorq_contended = bus.iorq && (~bus.a[0] || (~bus.a[1] && ~bus.a_raw[15] && bus.wr)) && (machine != MACHINE_S3);
 reg mreq_delayed, iorq_delayed;
 always @(negedge clk28) if (clkcpu_ck)
     mreq_delayed <= bus.mreq;
 always @(negedge clk28) if (clkcpu_ck)
-    iorq_delayed <= bus.iorq && ~bus.a_reg[0];
-wire contention_mem_page = (machine == MACHINE_S3)? rampage128[2] : rampage128[0];
-wire contention_mem_addr = bus.a[14] & (~bus.a[15] | (bus.a[15] & contention_mem_page));
+    iorq_delayed <= bus.iorq && ~bus.a[0];
+wire contention_mem_page = (machine == MACHINE_S3)? ram_page128[2] : ram_page128[0];
+wire contention_mem_addr = bus.a_raw[14] & (~bus.a_raw[15] | (bus.a_raw[15] & contention_mem_page));
 wire contention_mem = iorq_delayed == 1'b0 && mreq_delayed == 1'b0 && contention_mem_addr;
 wire contention_io = iorq_delayed == 1'b0 && iorq_contended;
-wire contention0 = screen_contention && (contention_mem || contention_io);
+wire contention0 = video_contention && (contention_mem || contention_io);
 wire contention = clkcpu && contention0 && turbo == TURBO_NONE && (machine == MACHINE_S48 || machine == MACHINE_S128 || machine == MACHINE_S3);
-assign snow = bus.a[14] && ~bus.a[15] && bus.rfsh && (machine == MACHINE_S48 || machine == MACHINE_S128);
+assign snow = bus.a_raw[14] && ~bus.a_raw[15] && bus.rfsh && (machine == MACHINE_S48 || machine == MACHINE_S128);
 
 
 /* CLOCK */
@@ -60,10 +60,10 @@ end
 
 reg clkcpu_prev;
 assign clkcpu_ck = clkcpu && !clkcpu_prev;
-assign clkwait = contention || (|turbo_wait[3:1]);
+assign clkcpu_stall = contention || (|turbo_wait[3:1]);
 always @(posedge clk28) begin
     clkcpu_prev <= clkcpu;
-    if (clkwait)
+    if (clkcpu_stall)
         clkcpu <= clkcpu;
     else if (turbo == TURBO_14)
         clkcpu <= clk14;
@@ -112,15 +112,15 @@ end
 /* RESET */
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
-        n_rstcpu <= 0;
+        n_rstcpu_out <= 0;
     else if (!init_done_in)
-        n_rstcpu <= 0;
+        n_rstcpu_out <= 0;
 `ifdef TESTBENCH
     else if (hc[4])
-        n_rstcpu <= 1'b1;
+        n_rstcpu_out <= 1'b1;
 `endif
     else if (vc[8])
-        n_rstcpu <= 1'b1;
+        n_rstcpu_out <= 1'b1;
 end
 
 

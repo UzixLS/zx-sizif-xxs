@@ -1,6 +1,5 @@
-`include "util.vh"
 import common::*;
-module screen(
+module video(
     input rst_n,
     input clk28,
 
@@ -15,23 +14,22 @@ module screen(
     output reg hsync,
     output reg csync,
 
-    input fetch_allow,
-    output reg fetch,
-    output fetch_next,
-    output [14:0] addr,
-    input [7:0] fetch_data,
+    input read_allow,
+    output reg read_req,
+    output read_req_next,
+    output [14:0] read_req_addr,
+    input [7:0] read_data,
 
     output contention,
-    output blink,
     output reg even_line,
     output port_ff_active,
     output [7:0] port_ff_data,
 
     input up_en,
     output [5:0] up_ink_addr,
+    input [7:0] up_ink_data,
     output [5:0] up_paper_addr,
-    input [7:0] up_ink,
-    input [7:0] up_paper,
+    input [7:0] up_paper_data,
 
     output [8:0] hc_out,
     output [8:0] vc_out,
@@ -43,7 +41,21 @@ module screen(
     output ck35
 );
 
-/* SCREEN CONTROLLER */
+reg  [8:0] vc;
+reg  [10:0] hc0;
+wire [8:0] hc = hc0[10:2];
+assign vc_out = vc;
+assign hc_out = hc;
+
+assign clk14 = hc0[0];
+assign clk7 = hc0[1];
+assign clk35 = hc0[2];
+assign ck14 = hc0[0];
+assign ck7 = hc0[0] & hc0[1];
+assign ck35 = hc0[0] & hc0[1] & hc0[2];
+
+
+/* SYNC SIGNALS */
 localparam H_AREA         = 256;
 localparam V_AREA         = 192;
 localparam SCREEN_DELAY   = 13;
@@ -81,20 +93,6 @@ localparam V_SYNC_PENT    = 8;
 localparam V_TBORDER_PENT = 64;
 localparam V_TOTAL_PENT   = V_AREA + V_BBORDER_PENT + V_SYNC_PENT + V_TBORDER_PENT;
 
-reg  [8:0] vc;
-reg  [10:0] hc0;
-wire [8:0] hc = hc0[10:2];
-
-assign vc_out = vc;
-assign hc_out = hc;
-
-assign clk14 = hc0[0];
-assign clk7 = hc0[1];
-assign clk35 = hc0[2];
-assign ck14 = hc0[0];
-assign ck7 = hc0[0] & hc0[1];
-assign ck35 = hc0[0] & hc0[1] & hc0[2];
-
 wire hc0_reset =
     (machine == MACHINE_S48)?
         hc0 == (H_TOTAL_S48<<2) - 1'b1 :
@@ -111,14 +109,11 @@ wire vc_reset =
         vc == V_TOTAL_PENT - 1'b1 ;
 wire hsync0 =
     (machine == MACHINE_S48)?
-        (hc >= (H_AREA + H_RBORDER_S48 + H_BLANK1_S48)) &&
-            (hc <  (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48)) :
+        (hc >= (H_AREA + H_RBORDER_S48 + H_BLANK1_S48)) && (hc < (H_AREA + H_RBORDER_S48 + H_BLANK1_S48 + H_SYNC_S48)) :
     (machine == MACHINE_S128 || machine == MACHINE_S3)?
-        (hc >= (H_AREA + H_RBORDER_S128 + H_BLANK1_S128)) &&
-            (hc <  (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128)) :
+        (hc >= (H_AREA + H_RBORDER_S128 + H_BLANK1_S128)) && (hc < (H_AREA + H_RBORDER_S128 + H_BLANK1_S128 + H_SYNC_S128)) :
     // Pentagon
-        (hc >= (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT)) &&
-            (hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT)) ;
+        (hc >= (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT)) && (hc < (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT)) ;
 wire vsync0 =
     (machine == MACHINE_S48)?
         (vc >= (V_AREA + V_BBORDER_S48)) && (vc < (V_AREA + V_BBORDER_S48 + V_SYNC_S48)) :
@@ -140,7 +135,6 @@ wire blank =
             ((hc >= (H_AREA + H_RBORDER_PENT)) &&
              (hc <  (H_AREA + H_RBORDER_PENT + H_BLANK1_PENT + H_SYNC_PENT + H_BLANK2_PENT))) ;
 
-
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         hc0 <= 0;
@@ -160,9 +154,8 @@ always @(posedge clk28 or negedge rst_n) begin
     end
 end
 
-
 reg [4:0] blink_cnt;
-assign blink = blink_cnt[$bits(blink_cnt)-1];
+wire blink = blink_cnt[$bits(blink_cnt)-1];
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         blink_cnt <= 0;
@@ -181,11 +174,24 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 
+/* SCREEN CONTROLLER */
 wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 1) && (hc0 < ((H_AREA + SCREEN_DELAY)<<2) - 1);
 wire screen_update = hc0[4:0] == 5'b10011;
 wire border_update = (hc0[4:0] == 5'b10011) || (machine == MACHINE_PENT && ck7);
 wire bitmap_shift = hc0[1:0] == 2'b11;
 wire next_addr = hc0[4:0] == 5'b10000;
+
+reg screen_read, up_read;
+always @(posedge clk28 or negedge rst_n) begin
+    if (!rst_n) begin
+        screen_read <= 0;
+        up_read <= 0;
+    end
+    else begin
+        screen_read <= (vc < V_AREA) && (hc0 > 15) && (hc0 < (H_AREA<<2) + 17);
+        up_read <= screen_read && (screen_update || up_read);
+    end
+end
 
 reg [7:0] vaddr;
 reg [7:3] haddr;
@@ -200,71 +206,59 @@ always @(posedge clk28 or negedge rst_n) begin
     end
 end
 
-reg loading, loading_up;
+reg [7:0] bitmap, attr, bitmap_next, attr_next;
+reg [7:0] up_ink, up_paper;
+
+reg [1:0] read_cnt;
+localparam READ_CYCLES = 2'd2;
+assign read_req_next = screen_read && (read_allow || (|read_cnt && read_cnt != READ_CYCLES && turbo == TURBO_14));
+
+reg read_step;
+assign read_req_addr = (read_step == 1'd0)?
+    { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
+    { 5'b10110, vaddr[7:3], haddr[7:3] };
+assign up_ink_addr = up_read? { attr_next[7:6], 1'b0, attr_next[2:0] } : { 3'b0, border[2:0] };
+assign up_paper_addr = up_read? { attr_next[7:6], 1'b1, attr_next[5:3] } : { 3'b0, border[2:0] };
+
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
-        loading <= 0;
-        loading_up <= 0;
+        read_req <= 0;
+        read_step <= 0;
+        read_cnt <= 0;
+        attr_next <= 0;
+        bitmap_next <= 0;
     end
     else begin
-        loading <= (vc < V_AREA) && (hc0 > 15) && (hc0 < (H_AREA<<2) + 17);
-        loading_up <= loading && (screen_update || loading_up);
+        read_req <= read_req_next;
+        if (read_cnt == READ_CYCLES) begin
+            if (read_step == 1'd1)
+                attr_next <= read_data;
+            if (read_step == 1'd0)
+                bitmap_next <= read_data;
+            read_step <= read_step + 1'b1;
+            read_cnt <= 0;
+        end
+        else if (read_req && read_req_next && !next_addr) begin
+            read_cnt <= read_cnt + 1'b1;
+        end
+        else begin
+            read_cnt <= 0;
+        end
     end
 end
 
-
-wire [7:0] attr_border = {2'b00, border[2:0], border[2:0]};
-
-reg [7:0] bitmap, attr, bitmap_next, attr_next;
-reg [7:0] up_ink0, up_paper0;
-
-reg [1:0] fetch_cnt;
-localparam FETCH_CYCLES = 2'd2;
-assign fetch_next = loading && (fetch_allow || (|fetch_cnt && fetch_cnt != FETCH_CYCLES && turbo == TURBO_14));
-
-reg fetch_step;
-wire fetch_bitmap = fetch && fetch_step == 1'd0 && fetch_cnt == FETCH_CYCLES;
-wire fetch_attr   = fetch && fetch_step == 1'd1 && fetch_cnt == FETCH_CYCLES;
-
-assign addr = (fetch_step == 1'd0)?
-    { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
-    { 5'b10110, vaddr[7:3], haddr[7:3] };
-assign up_ink_addr = loading_up? { attr_next[7:6], 1'b0, attr_next[2:0] } : { 3'b0, attr_border[2:0] };
-assign up_paper_addr = loading_up? { attr_next[7:6], 1'b1, attr_next[5:3] } : { 3'b0, attr_border[2:0] };
-
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
-        fetch <= 0;
-        fetch_step <= 0;
-        fetch_cnt <= 0;
         attr <= 0;
         bitmap <= 0;
-        attr_next <= 0;
-        bitmap_next <= 0;
-        up_ink0 <= 0;
-        up_paper0 <= 0;
+        up_ink <= 0;
+        up_paper <= 0;
     end
     else begin
-        fetch <= fetch_next;
-        if (fetch_cnt == FETCH_CYCLES) begin
-            if (fetch_step == 1'd1)
-                attr_next <= fetch_data;
-            if (fetch_step == 1'd0)
-                bitmap_next <= fetch_data;
-            fetch_step <= fetch_step + 1'b1;
-            fetch_cnt <= 0;
-        end
-        else if (fetch && fetch_next && !next_addr) begin
-            fetch_cnt <= fetch_cnt + 1'b1;
-        end
-        else begin
-            fetch_cnt <= 0;
-        end
-
         if (screen_show && screen_update)
             attr <= attr_next;
         else if (!screen_show && border_update)
-            attr <= attr_border;
+            attr <= {2'b00, border[2:0], border[2:0]};
 
         if (screen_update)
             bitmap <= bitmap_next;
@@ -272,9 +266,9 @@ always @(posedge clk28 or negedge rst_n) begin
             bitmap <= {bitmap[6:0], 1'b0};
 
         if (screen_update)
-            up_ink0 <= up_ink;
+            up_ink <= up_ink_data;
         if (screen_update)
-            up_paper0 <= up_paper;
+            up_paper <= up_paper_data;
     end
 end
 
@@ -282,7 +276,7 @@ end
 /* ATTRIBUTE PORT */
 wire port_ff_attr = (machine == MACHINE_PENT) || hc[3:1] == 3'h6 || hc[3:1] == 3'h0;
 wire port_ff_bitmap = (hc[3] && hc[1]);
-assign port_ff_active = loading && (port_ff_attr || port_ff_bitmap);
+assign port_ff_active = screen_read && (port_ff_attr || port_ff_bitmap);
 assign port_ff_data =
     port_ff_attr? attr_next :
     port_ff_bitmap? bitmap_next :
@@ -291,15 +285,15 @@ assign port_ff_data =
 assign contention = (vc < V_AREA) && (hc < H_AREA) && (hc[2] || hc[3]);
 
 
-/* RGBS generation */
+/* RGBS OUTPUT */
 wire pixel = bitmap[7];
 always @(posedge clk28) begin
     if (blank)
         {g, r, b} = 0;
     else if (up_en) begin
-        g[5:3] = pixel? up_ink0[7:5] : up_paper0[7:5];
-        r[5:3] = pixel? up_ink0[4:2] : up_paper0[4:2];
-        b[5:4] = pixel? up_ink0[1:0] : up_paper0[1:0];
+        g[5:3] = pixel? up_ink[7:5] : up_paper[7:5];
+        r[5:3] = pixel? up_ink[4:2] : up_paper[4:2];
+        b[5:4] = pixel? up_ink[1:0] : up_paper[1:0];
         g[2:0] = g[5:3];
         r[2:0] = r[5:3];
         b[3:0] = {b[5:4], b[5:4]};

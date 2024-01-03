@@ -58,36 +58,30 @@ wire ps2_key_reset, ps2_key_pause;
 wire [2:0] border;
 wire magic_reboot, magic_beeper;
 wire up_active;
-wire clkwait;
-wire [2:0] rampage128;
+wire clkcpu_stall;
+wire [2:0] ram_page128;
 wire init_done;
-wire screen_fetch, screen_fetch_next;
+wire video_read_req, video_read_req_next;
 
 
 /* CPU BUS */
 cpu_bus bus();
 reg bus_memreq, bus_ioreq;
+wire mem_bus_valid = !video_read_req && !video_read_req_next;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         bus_ioreq <= 0;
         bus_memreq <= 0;
     end
-    else if (!screen_fetch && !screen_fetch_next) begin
-        bus.a_reg <= {a[15:13], va[12:0]};
-        bus.d_reg <= vd;
-        bus_ioreq <= n_iorq == 1'b0 && n_m1 == 1'b1;
-        bus_memreq <= n_mreq == 1'b0 && n_rfsh == 1'b1;
-    end
     else begin
-        if (n_iorq)
-            bus_ioreq <= 0;
-        if (n_mreq)
-            bus_memreq <= 0;
+        bus.a <= mem_bus_valid? {a[15:13], va[12:0]} : bus.a;
+        bus.d <= mem_bus_valid? vd : bus.d;
+        bus_ioreq <= (mem_bus_valid | bus_ioreq) & ~n_iorq & n_m1;
+        bus_memreq <= (mem_bus_valid | bus_memreq) & ~n_mreq & n_rfsh;
     end
 end
 always @(posedge clk168) begin
-    bus.a <= {a[15:13], va[12:0]};
-    bus.d <= vd;
+    bus.a_raw <= {a[15:13], va[12:0]};
     bus.iorq <= ~n_iorq;
     bus.mreq <= ~n_mreq;
     bus.m1 <= ~n_m1;
@@ -106,25 +100,23 @@ always @(posedge clk28) begin
 end
 
 
-/* SCREEN CONTROLLER */
-wire blink;
-wire [2:0] screen_border = {border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0]};
+/* VIDEO CONTROLLER */
 wire [5:0] r, g, b;
 wire hsync, vsync, csync0;
-wire screen_contention, port_ff_active;
-wire [14:0] screen_addr;
+wire video_contention, port_ff_active;
+wire [14:0] video_read_addr;
 wire [5:0] up_ink_addr, up_paper_addr;
-wire [7:0] up_ink, up_paper;
+wire [7:0] up_ink_data, up_paper_data;
 wire [8:0] vc, hc;
 wire [7:0] port_ff_data;
 wire clk14, clk7, clk35, ck14, ck7, ck35;
-screen screen0(
+video video0(
     .rst_n(usrrst_n),
     .clk28(clk28),
 
     .machine(machine),
     .turbo(turbo),
-    .border(screen_border),
+    .border({border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0]}),
 
     .r(r),
     .g(g),
@@ -133,20 +125,19 @@ screen screen0(
     .vsync(vsync),
     .hsync(hsync),
 
-    .fetch_allow((!bus.iorq && !bus.mreq) || bus.rfsh || (clkwait && turbo == TURBO_NONE)),
-    .fetch(screen_fetch),
-    .addr(screen_addr),
-    .fetch_next(screen_fetch_next),
-    .fetch_data(bus.d),
+    .read_allow((!bus.iorq && !bus.mreq) || bus.rfsh || (clkcpu_stall && turbo == TURBO_NONE)),
+    .read_req(video_read_req),
+    .read_req_next(video_read_req_next),
+    .read_req_addr(video_read_addr),
+    .read_data(vd),
 
     .up_en(up_active),
     .up_ink_addr(up_ink_addr),
+    .up_ink_data(up_ink_data),
     .up_paper_addr(up_paper_addr),
-    .up_ink(up_ink),
-    .up_paper(up_paper),
+    .up_paper_data(up_paper_data),
 
-    .contention(screen_contention),
-    .blink(blink),
+    .contention(video_contention),
     .port_ff_active(port_ff_active),
     .port_ff_data(port_ff_data),
 
@@ -184,7 +175,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
     .clk(clk28),
     .ps2_clk_in(ps2_clk),
     .ps2_dat_in(ps2_dat),
-    .zxkb_addr(bus.a_reg[15:8]),
+    .zxkb_addr(bus.a[15:8]),
     .zxkb_data(ps2_kd),
     .key_magic(ps2_key_magic),
     .key_reset(ps2_key_reset),
@@ -199,7 +190,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
 
 /* CPU CONTROLLER */
 wire n_int_next, clkcpu_ck, snow;
-cpucontrol cpucontrol0(
+cpu cpu0(
     .rst_n(usrrst_n),
     .clk28(clk28),
     .clk14(clk14),
@@ -212,16 +203,16 @@ cpucontrol cpucontrol0(
 
     .vc(vc),
     .hc(hc),
-    .rampage128(rampage128),
+    .ram_page128(ram_page128),
     .machine(machine),
     .turbo(turbo),
-    .screen_contention(screen_contention),
+    .video_contention(video_contention),
     .init_done_in(init_done),
 
-    .n_rstcpu(n_rstcpu),
+    .n_rstcpu_out(n_rstcpu),
     .clkcpu(clkcpu),
     .clkcpu_ck(clkcpu_ck),
-    .clkwait(clkwait),
+    .clkcpu_stall(clkcpu_stall),
     .n_int(n_int),
     .n_int_next(n_int_next),
     .snow(snow)
@@ -275,9 +266,9 @@ magic magic0(
 wire [7:0] ports_dout;
 wire ports_dout_active;
 wire beeper, tape_out;
-wire screenpage;
-wire rompage128;
-wire [2:0] rampage_ext;
+wire video_page;
+wire rom_page128;
+wire [2:0] ram_pageext;
 wire [2:0] port_1ffd;
 wire [4:0] port_dffd;
 ports ports0 (
@@ -302,10 +293,10 @@ ports ports0 (
     .tape_out(tape_out),
     .beeper(beeper),
     .border(border),
-    .screenpage(screenpage),
-    .rompage128(rompage128),
-    .rampage128(rampage128),
-    .rampage_ext(rampage_ext),
+    .video_page(video_page),
+    .rom_page128(rom_page128),
+    .ram_page128(ram_page128),
+    .ram_pageext(ram_pageext),
     .port_1ffd(port_1ffd),
     .port_dffd(port_dffd)
 );
@@ -338,7 +329,7 @@ turbosound turbosound0(
 /* COVOX & SOUNDRIVE */
 wire [7:0] soundrive_l0, soundrive_l1, soundrive_r0, soundrive_r1;
 soundrive soundrive0(
-    .rst_n(usrrst_n),
+    .rst_n(n_rstcpu),
     .clk28(clk28),
     .en_covox(covox_en),
     .en_specdrum(covox_en),
@@ -405,8 +396,8 @@ divmmc divmmc0(
     .sd_cs(sd_cs),
 
     .rammap(port_dffd[4] | port_1ffd[0]),
-    .magic_mode(magic_mode),
-    .magic_map(magic_map),
+    .mask_hooks(magic_map),
+    .mask_nmi_hook(magic_mode),
 
     .page(div_page),
     .map(div_map),
@@ -430,10 +421,10 @@ ulaplus ulaplus0(
     .d_out_active(up_dout_active),
 
     .active(up_active),
-    .ink_addr(up_ink_addr),
-    .paper_addr(up_paper_addr),
-    .ink(up_ink),
-    .paper(up_paper)
+    .read_addr1(up_ink_addr),
+    .read_data1(up_ink_data),
+    .read_addr2(up_paper_addr),
+    .read_data2(up_paper_data)
 );
 
 
@@ -483,7 +474,7 @@ asmi asmi0(
 
 
 /* MEMORY CONTROLLER */
-memcontrol memcontrol0(
+mem mem0(
     .clk28(clk28),
     .bus(bus),
     .va(va),
@@ -492,25 +483,26 @@ memcontrol memcontrol0(
     .n_vwr(n_vwr),
 
     .machine(machine),
-    .screenpage(screenpage),
-    .screen_fetch(screen_fetch),
-    .snow(snow),
-    .screen_addr(screen_addr),
     .magic_map(magic_map),
-    .rampage128(rampage128),
-    .rompage128(rompage128),
+    .ram_page128(ram_page128),
+    .rom_page128(rom_page128),
     .port_1ffd(port_1ffd),
     .port_dffd(port_dffd),
-    .rampage_ext(rampage_ext),
-    .divmmc_en(divmmc_en),
+    .ram_pageext(ram_pageext),
     .div_ram(div_ram),
     .div_map(div_map),
     .div_ramwr_mask(div_ramwr_mask),
     .div_page(div_page),
 
+    .snow(snow),
+    .video_page(video_page),
+    .video_read_req(video_read_req),
+    .video_read_addr(video_read_addr),
+
     .rom2ram_ram_address(rom2ram_ram_address),
     .rom2ram_ram_wren(rom2ram_ram_wren),
     .rom2ram_dataout(rom2ram_dataout),
+
     .magic_dout_active(magic_dout_active),
     .magic_dout(magic_dout),
     .up_dout_active(up_dout_active),
