@@ -24,7 +24,7 @@ module divmmc(
 
     output reg [3:0] page,
     output map,
-    output automap,
+    output reg mapram,
     output ram,
     output ramwr_mask,
     output cpuwait
@@ -65,10 +65,10 @@ always @(posedge clk28 or negedge rst_n) begin
 end
 
 // #3Dxx entrypoint is critical for timings, so we're arming 'map' signal as soon as possible
-assign automap = automap0 || (bus.m1 && bus.memreq && !mask_hooks && en_hooks && en && !rammap && bus.a[15:8] == 8'h3D);
+wire automap = automap0 || (bus.m1 && bus.memreq && !mask_hooks && en_hooks && en && !rammap && bus.a[15:8] == 8'h3D);
 
 
-reg conmem, mapram;
+reg conmem;
 wire port_e3_cs = en && bus.ioreq && bus.a[7:0] == 8'hE3;
 wire port_e7_cs = en && bus.ioreq && bus.a[7:0] == 8'hE7;
 wire port_eb_cs = en && bus.ioreq && bus.a[7:0] == 8'hEB;

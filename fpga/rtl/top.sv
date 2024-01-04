@@ -220,7 +220,8 @@ cpu cpu0(
 
 
 /* MAGIC */
-wire div_automap;
+wire div_map;
+wire div_mapram;
 wire [7:0] magic_dout;
 wire magic_dout_active;
 wire magic_mode, magic_map;
@@ -242,7 +243,7 @@ magic magic0(
 
     .magic_button(ps2_key_magic),
     .pause_button(ps2_key_pause),
-    .div_automap(div_automap),
+    .div_paged(div_map && !div_mapram),
 
     .magic_mode(magic_mode),
     .magic_map(magic_map),
@@ -372,7 +373,7 @@ mixer mixer0(
 
 
 /* DIVMMC */
-wire div_map, div_ram, div_ramwr_mask, div_dout_active;
+wire div_ram, div_ramwr_mask, div_dout_active;
 wire [7:0] div_dout;
 wire [3:0] div_page;
 wire sd_mosi0;
@@ -401,7 +402,7 @@ divmmc divmmc0(
 
     .page(div_page),
     .map(div_map),
-    .automap(div_automap),
+    .mapram(div_mapram),
     .ram(div_ram),
     .ramwr_mask(div_ramwr_mask)
 );
