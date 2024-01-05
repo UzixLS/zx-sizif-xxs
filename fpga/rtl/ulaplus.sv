@@ -23,6 +23,7 @@ reg port_ff3b_rd;
 wire [7:0] port_ff3b_data = {7'b0000000, active};
 
 reg [7:0] addr_reg;
+reg [2:0] read_req;
 reg [1:0] write_req;
 
 always @(posedge clk28 or negedge rst_n) begin
@@ -38,7 +39,8 @@ always @(posedge clk28 or negedge rst_n) begin
         if (port_ff3b_cs && bus.wr && addr_reg == 8'b01000000)
             active <= bus.d[0];
 
-        write_req <= {write_req[0], port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
+        read_req  <= {read_req[1:0], port_ff3b_cs && bus.rd && addr_reg[7:6] == 2'b00};
+        write_req <= {write_req[0],  port_ff3b_cs && bus.wr && addr_reg[7:6] == 2'b00};
         port_ff3b_rd <= port_ff3b_cs && bus.rd;
 
         if (!en)
@@ -46,13 +48,7 @@ always @(posedge clk28 or negedge rst_n) begin
     end
 end
 
-
-wire write_req0 = write_req[0] && !write_req[1];
 reg read_step;
-wire [5:0] ram_a = write_req0? addr_reg[5:0] : read_step? read_addr2 : read_addr1;
-wire [7:0] ram_q;
-ulaplus_ram pallete(ram_q, ram_a, bus.d, write_req0, clk28);
-
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         read_step <= 0;
@@ -60,15 +56,24 @@ always @(posedge clk28 or negedge rst_n) begin
         read_step <= !read_step;
 end
 
+wire read_req0  = read_req[0]  && !read_req[1];
+wire write_req0 = write_req[0] && !write_req[1];
+wire [5:0] ram_a = (write_req0 || read_req0)? addr_reg[5:0] : read_step? read_addr2 : read_addr1;
+wire [7:0] ram_q;
+ulaplus_ram pallete(ram_q, ram_a, bus.d, write_req0, clk28);
+
+reg [7:0] ram_q_reg;
 always @(posedge clk28) begin
-    if (read_step)
+    if (read_req[1] && !read_req[2])
+        ram_q_reg <= ram_q;
+    else if (read_step)
         read_data1 <= ram_q;
     else
         read_data2 <= ram_q;
 end
 
 
-assign d_out = port_ff3b_data;
+assign d_out = (addr_reg[7:6] == 2'b00)? ram_q_reg : port_ff3b_data;
 assign d_out_active = port_ff3b_rd;
 
 endmodule
