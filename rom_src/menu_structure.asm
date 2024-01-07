@@ -37,7 +37,14 @@ menudefault: MENU_DEF 20
     MENUENTRY_T str_sd          menu_sd_value_cb          menu_sd_cb
     MENUENTRY_T str_ulaplus     menu_ulaplus_value_cb     menu_ulaplus_cb
     MENUENTRY_T str_dac         menu_dac_value_cb         menu_dac_cb
+    MENUENTRY_T str_menuadv     0                         menu_menuadv_cb
     MENUENTRY_T str_exit        menu_exit_value_cb        menu_exit_cb
+    MENUENTRY_T 0
+.end:
+
+menuadv: MENU_DEF 22
+    MENUENTRY_T str_sd_indication menu_sdind_value_cb     menu_sdind_cb
+    MENUENTRY_T str_back          0                       menu_back_cb
     MENUENTRY_T 0
 .end:
 
@@ -116,6 +123,13 @@ menu_exit_value_cb:
     DW str_exit_no_reboot.end-2
     DW str_exit_reboot.end-2
 
+menu_sdind_value_cb:
+    ld ix, .values_table
+    ld a, (cfg.sdind)
+    jp menu_value_get
+.values_table:
+    DW str_off_short.end-2
+    DW str_on_short.end-2
 menu_value_get:
     sla a
     ld c, a
@@ -202,6 +216,25 @@ menu_exit_cb:
     ld a, 1
     ld (var_exit_flag), a
     ret
+
+menu_menuadv_cb:
+    ld hl, menuadv
+    call menu_init
+    ret
+
+menu_sdind_cb:
+    ld a, (cfg.sdind)
+    ld c, 1
+    call menu_handle_press
+    ld (cfg.sdind), a
+    ld bc, #0cff
+    out (c), a
+    ret
+
+menu_back_cb:
+    call restore_screen
+    ld hl, (var_menumain)
+    jp menu_init
 
 
 ; IN  -  A - variable to change

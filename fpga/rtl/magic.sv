@@ -29,7 +29,8 @@ module magic(
     output reg ulaplus_en,
     output reg ay_en,
     output reg covox_en,
-    output reg soundrive_en
+    output reg soundrive_en,
+    output reg sd_indication_en
 );
 
 localparam magic_on_start = 1'b1;
@@ -92,6 +93,7 @@ always @(posedge clk28 or negedge rst_n) begin
         ay_en <= 1'b1;
         covox_en <= 1'b1;
         soundrive_en <= 1'b1;
+        sd_indication_en <= 1'b1;
     end
     else if (config_cs && bus.wr) case (bus.a[15:8])
         8'h01: {magic_reboot, magic_beeper} <= bus.d[1:0];
@@ -103,6 +105,7 @@ always @(posedge clk28 or negedge rst_n) begin
         8'h09: {zc_en, divmmc_en} <= bus.d[1:0];
         8'h0A: ulaplus_en <= bus.d[0];
         8'h0B: {soundrive_en, covox_en} <= bus.d[1:0];
+        8'h0C: sd_indication_en <= bus.d[0];
     endcase
 end
 

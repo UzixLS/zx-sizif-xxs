@@ -62,6 +62,7 @@ wire clkcpu_stall;
 wire [2:0] ram_page128;
 wire init_done;
 wire video_read_req, video_read_req_next;
+wire sd_indication;
 
 
 /* CPU BUS */
@@ -116,7 +117,7 @@ video video0(
 
     .machine(machine),
     .turbo(turbo),
-    .border({border[2] ^ ~sd_cs, border[1] ^ magic_beeper, border[0]}),
+    .border({border[2] ^ sd_indication, border[1] ^ magic_beeper, border[0]}),
 
     .r(r),
     .g(g),
@@ -227,7 +228,8 @@ wire magic_dout_active;
 wire magic_mode, magic_map;
 wire joy_sinclair, up_en, ay_en, covox_en, soundrive_en;
 panning_t panning;
-wire divmmc_en, zc_en;
+wire divmmc_en, zc_en, sd_indication_en;
+assign sd_indication = sd_indication_en & ~sd_cs;
 
 magic magic0(
     .rst_n(n_rstcpu),
@@ -259,7 +261,8 @@ magic magic0(
     .ulaplus_en(up_en),
     .ay_en(ay_en),
     .covox_en(covox_en),
-    .soundrive_en(soundrive_en)
+    .soundrive_en(soundrive_en),
+    .sd_indication_en(sd_indication_en)
 );
 
 
@@ -352,7 +355,7 @@ mixer mixer0(
 
     .beeper(beeper ^ magic_beeper),
     .tape_out(tape_out),
-    .tape_in(sd_miso_tape_in),
+    .tape_in((divmmc_en || zc_en)? sd_indication : sd_miso_tape_in),
     .ay_a0(ay_a0),
     .ay_b0(ay_b0),
     .ay_c0(ay_c0),
@@ -406,7 +409,7 @@ divmmc divmmc0(
     .ram(div_ram),
     .ramwr_mask(div_ramwr_mask)
 );
-assign sd_mosi_tape_out = (!divmmc_en && !zc_en)? tape_out : sd_mosi0;
+assign sd_mosi_tape_out = (divmmc_en || zc_en)? sd_mosi0 : tape_out;
 
 
 /* ULAPLUS */
