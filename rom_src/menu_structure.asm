@@ -48,73 +48,73 @@ menu_machine_value_cb:
     ld a, (cfg.machine)
     jp menu_value_get
 .values_table:
-    DW str_machine_48_end-2
-    DW str_machine_128_end-2
-    DW str_machine_3e_end-2
-    DW str_machine_pentagon_end-2
+    DW str_machine_48.end-2
+    DW str_machine_128.end-2
+    DW str_machine_3e.end-2
+    DW str_machine_pentagon.end-2
 
 menu_clock_value_cb:
     ld ix, .values_table
     ld a, (cfg.clock)
     jp menu_value_get
 .values_table:
-    DW str_cpu_35_end-2
-    DW str_cpu_44_end-2
-    DW str_cpu_52_end-2
-    DW str_cpu_7_end-2
-    DW str_cpu_14_end-2
+    DW str_cpu_35.end-2
+    DW str_cpu_44.end-2
+    DW str_cpu_52.end-2
+    DW str_cpu_7.end-2
+    DW str_cpu_14.end-2
 
 menu_panning_value_cb:
     ld ix, .values_table
     ld a, (cfg.panning)
     jp menu_value_get
 .values_table:
-    DW str_panning_mono_end-2
-    DW str_panning_abc_end-2
-    DW str_panning_acb_end-2
+    DW str_panning_mono.end-2
+    DW str_panning_abc.end-2
+    DW str_panning_acb.end-2
 
 menu_joystick_value_cb:
     ld ix, .values_table
     ld a, (cfg.joystick)
     jp menu_value_get
 .values_table:
-    DW str_joystick_kempston_end-2
-    DW str_joystick_sinclair_end-2
+    DW str_joystick_kempston.end-2
+    DW str_joystick_sinclair.end-2
 
 menu_sd_value_cb:
     ld ix, .values_table
     ld a, (cfg.sd)
     jp menu_value_get
 .values_table:
-    DW str_off_end-2
-    DW str_divmmc_end-2
-    DW str_zc3e_end-2
+    DW str_off.end-2
+    DW str_divmmc.end-2
+    DW str_zc3e.end-2
 
 menu_ulaplus_value_cb:
     ld ix, .values_table
     ld a, (cfg.ulaplus)
     jp menu_value_get
 .values_table:
-    DW str_off_end-2
-    DW str_on_end-2
+    DW str_off.end-2
+    DW str_on.end-2
 
 menu_dac_value_cb:
     ld ix, .values_table
     ld a, (cfg.dac)
     jp menu_value_get
 .values_table:
-    DW str_off_end-2
-    DW str_dac_covox_end-2
-    DW str_dac_sd_end-2
-    DW str_dac_covoxsd_end-2
+    DW str_off.end-2
+    DW str_dac_covox.end-2
+    DW str_dac_sd.end-2
+    DW str_dac_covoxsd.end-2
 
 menu_exit_value_cb:
     ld ix, .values_table
     ld a, (var_exit_reboot)
     jp menu_value_get
 .values_table:
-    DW str_exit_no_reboot_end-2
-    DW str_exit_reboot_end-2
+    DW str_exit_no_reboot.end-2
+    DW str_exit_reboot.end-2
 
 menu_value_get:
     sla a

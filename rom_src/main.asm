@@ -1,5 +1,6 @@
+    ASSERT __SJASMPLUS__ >= 0x011402 ; SjASMPlus 1.20.2
+    OPT --syntax=abf
     DEVICE ZXSPECTRUM48
-    OPT --syntax=F
 
 ; Startup handler
     ORG #0000
@@ -76,7 +77,7 @@ nmi_handler:
     call check_entering_pause ; A[1] == 1 if pause button is pressed
     bit 1, a                  ; ...
     jp nz, .enter_pause       ; ...
-    call delay_10ms           ; 
+    call delay_10ms           ;
     call check_entering_menu  ; A == 1 if we are entering menu, A == 2 if we are leaving to...
     bit 0, a                  ; ...default nmi handler, A == 0 otherwise
     jp nz, .enter_menu        ; ...
@@ -89,14 +90,14 @@ nmi_handler:
     ld bc, #00ff              ; ...
     in a, (c)                 ; if divmmc paged - just do retn
     bit 3, a                  ; ...
-    jr nz, exit_with_ret      ; ... 
+    jr nz, exit_with_ret      ; ...
     ld hl, #0066              ; otherwise jump to default nmi handler
     jr exit_with_jp           ; ...
 
 .enter_pause:
     ld hl, nmi_pause
     ld (var_main_fun), hl
-    jr .enter  
+    jr .enter
 .enter_menu:
     ld hl, nmi_menu
     ld (var_main_fun), hl
@@ -130,7 +131,7 @@ nmi_handler:
     out (c), a                ; ...
 .leave_without_reboot:
     pop af                    ; A = I
-    push af                   ; 
+    push af                   ;
     call get_im2_handler      ; HL = default im2 handler address
     ld (var_int_vector), hl
     xor a                     ; disable border
@@ -208,7 +209,7 @@ load_config:
 save_config:
     ld bc, CFG_T          ; cfg_saved = cfg
     ld de, cfg_saved      ; ...
-    ld hl, cfg            ; ... 
+    ld hl, cfg            ; ...
     ldir                  ; ...
     ret
 
@@ -230,7 +231,7 @@ init_cpld:
     out (c), a                  ; ...
 .do_load:
     ld b, CFG_T        ; B = registers count
-    ld c, #ff          ; 
+    ld c, #ff          ;
     ld hl, cfg+CFG_T-1 ; HL = &cfg[registers count-1]
     otdr               ; do { b--; out(bc, *hl); hl--; } while(b)
     ret
@@ -259,7 +260,7 @@ check_entering_pause:
 
 ; OUT -  A = 1 if we are entering menu, A = 2 if we are leaving menu, A = 0 otherwise
 ; OUT -  F - garbage
-check_entering_menu: 
+check_entering_menu:
     xor a                       ; read magic key state in bit 0 of #00FF port
     in a, (#ff)                 ; ...
     bit 0, a                    ; check key is hold
@@ -497,13 +498,22 @@ wait_for_keys_release:
     include font.asm
     include strings.asm
 
-    DISPLAY "Free space: ",/D,#1FE8-$
-    ASSERT $ < #1FE8
+    DISPLAY "Free space: ",/D,fwinfo-$," (",$,")"
+    ASSERT $ < fwinfo
 
 
-; Just some string at the end of ROM
-    ORG #1FE8
-    DB 0,"End of Sizif Magic ROM",0
+; Just some firmware info at the end of ROM
+    ORG #2000-(fwinfo.end-fwinfo)
+fwinfo:
+    DB 0
+.version:
+    DB VERSION, 0
+.date
+    DB __DATE__, 0
+.time:
+    DB __TIME__, 0
+    DB "End of Sizif Magic ROM", 0
+.end
 
 ; Variables
     ORG #C000
@@ -514,7 +524,7 @@ var_ram_func:
 
 ; Magic vectors
     ORG #F000
-Exit_vector: 
+Exit_vector:
     ORG #F008
 Readout_vector:
 
