@@ -16,6 +16,7 @@ interface cpu_bus();
     reg rd;
     reg wr;
 
-    wire ioreq;
-    wire memreq;
+    reg ioreq;
+    reg memreq;
+    reg memreq_rise;
 endinterface

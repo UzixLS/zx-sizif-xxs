@@ -4,7 +4,6 @@ module video(
     input clk28,
 
     input machine_t machine,
-    input turbo_t turbo,
     input [2:0] border,
 
     output reg [5:0] r,
@@ -14,10 +13,10 @@ module video(
     output reg hsync,
     output reg csync,
 
-    input read_allow,
-    output reg read_req,
-    output read_req_next,
+    output read_req,
     output [14:0] read_req_addr,
+    input read_req_ack,
+    input read_data_valid,
     input [7:0] read_data,
 
     output contention,
@@ -179,7 +178,7 @@ wire screen_show = (vc < V_AREA) && (hc0 >= (SCREEN_DELAY<<2) - 1) && (hc0 < ((H
 wire screen_update = hc0[4:0] == 5'b10011;
 wire border_update = (hc0[4:0] == 5'b10011) || (machine == MACHINE_PENT && ck7);
 wire bitmap_shift = hc0[1:0] == 2'b11;
-wire next_addr = hc0[4:0] == 5'b10000;
+wire next_addr = hc0[4:0] == 5'b10001;
 
 reg screen_read, up_read;
 always @(posedge clk28 or negedge rst_n) begin
@@ -188,7 +187,7 @@ always @(posedge clk28 or negedge rst_n) begin
         up_read <= 0;
     end
     else begin
-        screen_read <= (vc < V_AREA) && (hc0 > 15) && (hc0 < (H_AREA<<2) + 17);
+        screen_read <= (vc < V_AREA) && (hc0 > 17) && (hc0 < (H_AREA<<2) + 17);
         up_read <= screen_read && (screen_update || up_read);
     end
 end
@@ -209,41 +208,39 @@ end
 reg [7:0] bitmap, attr, bitmap_next, attr_next;
 reg [7:0] up_ink, up_paper;
 
-reg [1:0] read_cnt;
-localparam READ_CYCLES = 2'd2;
-assign read_req_next = screen_read && (read_allow || (|read_cnt && read_cnt != READ_CYCLES && turbo == TURBO_14));
-
-reg read_step;
-assign read_req_addr = (read_step == 1'd0)?
+reg read_step, read_step_cur;
+assign read_req = 1'b1; // just to simplify logic
+assign read_req_addr = (read_step == 1'd1)?
     { 2'b10, vaddr[7:6], vaddr[2:0], vaddr[5:3], haddr[7:3] } :
     { 5'b10110, vaddr[7:3], haddr[7:3] };
-assign up_ink_addr = up_read? { attr_next[7:6], 1'b0, attr_next[2:0] } : { 3'b0, border[2:0] };
+assign up_ink_addr   = up_read? { attr_next[7:6], 1'b0, attr_next[2:0] } : { 3'b0, border[2:0] };
 assign up_paper_addr = up_read? { attr_next[7:6], 1'b1, attr_next[5:3] } : { 3'b0, border[2:0] };
 
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
-        read_req <= 0;
         read_step <= 0;
-        read_cnt <= 0;
+        read_step_cur <= 0;
         attr_next <= 0;
         bitmap_next <= 0;
     end
     else begin
-        read_req <= read_req_next;
-        if (read_cnt == READ_CYCLES) begin
-            if (read_step == 1'd1)
-                attr_next <= read_data;
-            if (read_step == 1'd0)
-                bitmap_next <= read_data;
-            read_step <= read_step + 1'b1;
-            read_cnt <= 0;
-        end
-        else if (read_req && read_req_next && !next_addr) begin
-            read_cnt <= read_cnt + 1'b1;
-        end
-        else begin
-            read_cnt <= 0;
-        end
+        if (next_addr)
+            read_step <= 0;
+        else if (read_req_ack)
+            read_step <= read_step + 1'd1;
+
+        if (read_req_ack)
+            read_step_cur <= read_step;
+
+        if (read_data_valid && read_step_cur == 2'd0 && screen_read)
+            attr_next <= read_data;
+        else if (!screen_read && hc0[0])
+            attr_next <= {2'b00, border[2:0], border[2:0]};
+
+        if (read_data_valid && read_step_cur == 2'd1 && screen_read)
+            bitmap_next <= read_data;
+        else if (!screen_read && hc0[0])
+            bitmap_next <= 0;
     end
 end
 

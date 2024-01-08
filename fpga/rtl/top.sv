@@ -58,30 +58,16 @@ wire ps2_key_reset, ps2_key_pause;
 wire [2:0] border;
 wire magic_reboot, magic_beeper;
 wire up_active;
-wire clkcpu_stall;
 wire [2:0] ram_page128;
 wire init_done;
-wire video_read_req, video_read_req_next;
+wire mem_bus_valid;
+wire mem_wait;
 wire sd_indication;
 
 
 /* CPU BUS */
 cpu_bus bus();
-reg bus_memreq, bus_ioreq;
-wire mem_bus_valid = !video_read_req && !video_read_req_next;
-always @(posedge clk28 or negedge rst_n) begin
-    if (!rst_n) begin
-        bus_ioreq <= 0;
-        bus_memreq <= 0;
-    end
-    else begin
-        bus.a <= mem_bus_valid? {a[15:13], va[12:0]} : bus.a;
-        bus.d <= mem_bus_valid? vd : bus.d;
-        bus_ioreq <= (mem_bus_valid | bus_ioreq) & ~n_iorq & n_m1;
-        bus_memreq <= (mem_bus_valid | bus_memreq) & ~n_mreq & n_rfsh;
-    end
-end
-always @(posedge clk168) begin
+always @(negedge clk28) begin
     bus.a_raw <= {a[15:13], va[12:0]};
     bus.iorq <= ~n_iorq;
     bus.mreq <= ~n_mreq;
@@ -90,8 +76,13 @@ always @(posedge clk168) begin
     bus.rd <= ~n_rd;
     bus.wr <= ~n_wr;
 end
-assign bus.ioreq = bus_ioreq & bus.iorq;
-assign bus.memreq = bus_memreq & bus.mreq;
+always @(posedge clk28) begin
+    bus.a <= mem_bus_valid? {a[15:13], va[12:0]} : bus.a;
+    bus.d <= mem_bus_valid? vd : bus.d;
+    bus.ioreq <= (mem_bus_valid | bus.ioreq) & ~n_iorq & n_m1;
+    bus.memreq <= (mem_bus_valid | bus.memreq) & ~n_mreq & n_rfsh;
+    bus.memreq_rise <= mem_bus_valid & ~bus.memreq & ~n_mreq & n_rfsh;
+end
 
 
 /* RESET */
@@ -105,6 +96,7 @@ end
 wire [5:0] r, g, b;
 wire hsync, vsync, csync0;
 wire video_contention, port_ff_active;
+wire video_read_req, video_read_req_ack, video_read_data_valid;
 wire [14:0] video_read_addr;
 wire [5:0] up_ink_addr, up_paper_addr;
 wire [7:0] up_ink_data, up_paper_data;
@@ -116,7 +108,6 @@ video video0(
     .clk28(clk28),
 
     .machine(machine),
-    .turbo(turbo),
     .border({border[2] ^ sd_indication, border[1] ^ magic_beeper, border[0]}),
 
     .r(r),
@@ -126,10 +117,10 @@ video video0(
     .vsync(vsync),
     .hsync(hsync),
 
-    .read_allow((!bus.iorq && !bus.mreq) || bus.rfsh || (clkcpu_stall && turbo == TURBO_NONE)),
     .read_req(video_read_req),
-    .read_req_next(video_read_req_next),
     .read_req_addr(video_read_addr),
+    .read_req_ack(video_read_req_ack),
+    .read_data_valid(video_read_data_valid),
     .read_data(vd),
 
     .up_en(up_active),
@@ -190,7 +181,7 @@ ps2 #(.CLK_FREQ(28_000_000)) ps2_0(
 
 
 /* CPU CONTROLLER */
-wire n_int_next, clkcpu_ck, snow;
+wire n_int_next, clkcpu_ck, snow, cpu_contention;
 cpu cpu0(
     .rst_n(usrrst_n),
     .clk28(clk28),
@@ -207,16 +198,17 @@ cpu cpu0(
     .ram_page128(ram_page128),
     .machine(machine),
     .turbo(turbo),
+    .hold(mem_wait),
     .video_contention(video_contention),
     .init_done_in(init_done),
 
     .n_rstcpu_out(n_rstcpu),
     .clkcpu(clkcpu),
     .clkcpu_ck(clkcpu_ck),
-    .clkcpu_stall(clkcpu_stall),
     .n_int(n_int),
     .n_int_next(n_int_next),
-    .snow(snow)
+    .snow(snow),
+    .contention(cpu_contention)
 );
 
 
@@ -479,6 +471,7 @@ asmi asmi0(
 
 /* MEMORY CONTROLLER */
 mem mem0(
+    .rst_n(rst_n),
     .clk28(clk28),
     .bus(bus),
     .va(va),
@@ -486,7 +479,12 @@ mem mem0(
     .n_vrd(n_vrd),
     .n_vwr(n_vwr),
 
+    .bus_valid(mem_bus_valid),
+    .cpuwait(mem_wait),
+
     .machine(machine),
+    .turbo(turbo),
+    .cpu_contention(cpu_contention),
     .magic_map(magic_map),
     .ram_page128(ram_page128),
     .rom_page128(rom_page128),
@@ -502,6 +500,8 @@ mem mem0(
     .video_page(video_page),
     .video_read_req(video_read_req),
     .video_read_addr(video_read_addr),
+    .video_read_req_ack(video_read_req_ack),
+    .video_data_valid(video_read_data_valid),
 
     .rom2ram_ram_address(rom2ram_ram_address),
     .rom2ram_ram_wren(rom2ram_ram_wren),

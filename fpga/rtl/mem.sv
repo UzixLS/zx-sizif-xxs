@@ -1,13 +1,19 @@
 import common::*;
 module mem(
+    input rst_n,
     input clk28,
     cpu_bus bus,
-    output [18:0] va,
+    output reg [18:0] va,
     inout [7:0] vd,
-    output n_vrd,
-    output n_vwr,
+    output reg n_vrd,
+    output reg n_vwr,
+
+    output bus_valid,
+    output cpuwait,
 
     input machine_t machine,
+    input turbo_t turbo,
+    input cpu_contention,
     input magic_map,
     input [2:0] ram_page128,
     input rom_page128,
@@ -23,10 +29,13 @@ module mem(
     input video_page,
     input video_read_req,
     input [14:0] video_read_addr,
+    output video_read_req_ack,
+    output video_data_valid,
 
     input [16:0] rom2ram_ram_address,
     input rom2ram_ram_wren,
     input [7:0] rom2ram_dataout,
+
     input magic_dout_active,
     input [7:0] magic_dout,
     input up_dout_active,
@@ -51,11 +60,11 @@ module mem(
 reg romreq, ramreq, ramreq_wr;
 reg [18:13] va_18_13;
 wire [15:0] a = bus.a_raw[15:0];
-always @(negedge clk28) begin
-    romreq =  bus.mreq && a[15:14] == 2'b00 &&
+always @* begin
+    romreq =  a[15:14] == 2'b00 &&
         (magic_map || (!div_ram && div_map) || (!div_ram && !port_dffd[4] && !port_1ffd[0]));
-    ramreq = bus.mreq && !romreq;
-    ramreq_wr = ramreq && bus.wr && div_ramwr_mask == 0;
+    ramreq = !romreq;
+    ramreq_wr = ramreq && div_ramwr_mask == 0;
 
     if (romreq) va_18_13 =
         (magic_map)                                                            ? {5'd2, 1'b0} :
@@ -80,15 +89,6 @@ always @(negedge clk28) begin
                                                          {2'b11, a[14], a[15], a[14], a[13]} ;
 end
 
-assign n_vrd = (((bus.mreq && bus.rd) || video_read_req) && !rom2ram_ram_wren)? 1'b0 : 1'b1;
-assign n_vwr = ((ramreq_wr && bus.wr && !video_read_req) || rom2ram_ram_wren)? 1'b0 : 1'b1;
-
-assign va[18:0] =
-    (rom2ram_ram_wren)       ? {2'b00, rom2ram_ram_address} :
-    (video_read_req && snow) ? {3'b111, video_page, video_read_addr[14:8], {8{1'bz}}} :
-    (video_read_req)         ? {3'b111, video_page, video_read_addr} :
-                               {va_18_13, {13{1'bz}}};
-
 assign vd[7:0] =
     ~n_vrd                 ? {8{1'bz}} :
     bus.wr                 ? {8{1'bz}} :
@@ -101,6 +101,103 @@ assign vd[7:0] =
     (bus.m1 && bus.iorq)   ? 8'hFF :
     bus.rd                 ? 8'hFF :
                              {8{1'bz}} ;
+
+localparam BUS_VALID_LATENCY = 2'd1;
+reg [1:0] bus_valid_step;
+localparam LATENCY = 2'd2;
+reg [1:0] step;
+localparam REQ_NONE       = 3'd0;
+localparam REQ_CPU_RD     = 3'd1;
+localparam REQ_CPU_WR     = 3'd2;
+localparam REQ_VIDEO_RD   = 3'd3;
+localparam REQ_ROM2RAM_WR = 3'd4;
+reg [2:0] current_req;
+reg cpuwait_reg;
+
+always @(posedge clk28 or negedge rst_n) begin
+    if (!rst_n) begin
+        va                       <= {va_18_13, {13{1'bz}}};
+        n_vrd                    <= 1'b1;
+        n_vwr                    <= 1'b1;
+        cpuwait_reg              <= 0;
+        bus_valid_step           <= 0;
+        step                     <= 0;
+        current_req              <= REQ_NONE;
+    end
+    else begin
+        if (step)
+            step                 <= step - 1'd1;
+        if (bus_valid_step)
+            bus_valid_step       <= bus_valid_step - 1'd1;
+        if (!(bus.mreq && bus.rd))
+            cpuwait_reg          <= 0;
+
+        if (rom2ram_ram_wren) begin
+            if (current_req != REQ_ROM2RAM_WR)
+                step             <= LATENCY;
+            va                   <= {2'b00, rom2ram_ram_address};
+            n_vrd                <= 1'b1;
+            n_vwr                <= (current_req == REQ_ROM2RAM_WR && step == 0)? 1'b1 : 1'b0;
+            bus_valid_step       <= BUS_VALID_LATENCY;
+            current_req          <= REQ_ROM2RAM_WR;
+        end
+        else if (turbo == TURBO_14 && current_req == REQ_VIDEO_RD && step) begin
+            // complete current request
+            bus_valid_step       <= BUS_VALID_LATENCY;
+        end
+        else if (bus.mreq && bus.wr && ramreq_wr) begin
+            if (current_req != REQ_CPU_WR)
+                step             <= LATENCY;
+            va                   <= {va_18_13, {13{1'bz}}};
+            n_vrd                <= 1'b1;
+            n_vwr                <= (current_req == REQ_CPU_WR && step == 0)? 1'b1 : 1'b0;
+            current_req          <= REQ_CPU_WR;
+        end
+        else if (bus.mreq && bus.rd) begin
+            if (current_req != REQ_CPU_RD) begin
+                step             <= LATENCY;
+            end
+            else if (va[18:13] != va_18_13) begin
+                cpuwait_reg      <= 1'b1;
+                step             <= LATENCY;
+            end
+            else if (!step) begin
+                cpuwait_reg      <= 1'b0;
+            end
+            va                   <= {va_18_13, {13{1'bz}}};
+            n_vrd                <= 1'b0;
+            n_vwr                <= 1'b1;
+            current_req          <= REQ_CPU_RD;
+        end
+        else if ((bus.mreq || bus.iorq) && !bus.rfsh && !cpu_contention) begin
+            va                   <= {va_18_13, {13{1'bz}}};
+            n_vrd                <= 1'b1;
+            n_vwr                <= 1'b1;
+            current_req          <= REQ_NONE;
+        end
+        else if (video_read_req) begin
+            if (current_req != REQ_VIDEO_RD || !step)
+                step             <= LATENCY;
+            va                   <= snow? {3'b111, video_page, video_read_addr[14:7], {7{1'bz}}} :
+                                          {3'b111, video_page, video_read_addr} ;
+            n_vrd                <= 1'b0;
+            n_vwr                <= 1'b1;
+            bus_valid_step       <= BUS_VALID_LATENCY;
+            current_req          <= REQ_VIDEO_RD;
+        end
+        else begin
+            va                   <= {va_18_13, {13{1'bz}}};
+            n_vrd                <= 1'b1;
+            n_vwr                <= 1'b1;
+            current_req          <= REQ_NONE;
+        end
+    end
+end
+
+assign cpuwait                = cpuwait_reg || (bus.mreq && bus.rd && current_req == REQ_CPU_RD && va[18:13] != va_18_13);
+assign bus_valid              = bus_valid_step == 0;
+assign video_data_valid       = current_req == REQ_VIDEO_RD && step == 0;
+assign video_read_req_ack     = current_req == REQ_VIDEO_RD && step == 1'd1 && (!((bus.mreq || bus.iorq) && !bus.rfsh && !cpu_contention) || turbo == TURBO_14);
 
 
 endmodule

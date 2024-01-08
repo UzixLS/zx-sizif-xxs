@@ -27,17 +27,17 @@ module divmmc(
     output reg mapram,
     output ram,
     output ramwr_mask,
-    output cpuwait
+    output ext_wait_cycle2
 );
 
 
-reg automap0, automap_next;
+reg automap, automap_next;
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n) begin
         automap_next <= 0;
-        automap0 <= 0;
+        automap <= 0;
     end
-    else if (bus.m1 && bus.memreq && !mask_hooks) begin
+    else if (bus.m1 && bus.memreq_rise && !mask_hooks) begin
         if (!en_hooks || !en || rammap) begin
             automap_next <= 0;
         end
@@ -56,17 +56,13 @@ always @(posedge clk28 or negedge rst_n) begin
         end
         else if (bus.a[15:8] == 8'h3D) begin // tr-dos mapping area
             automap_next <= 1'b1;
-            automap0 <= 1'b1;
+            automap <= 1'b1;
         end
     end
     else if (!bus.m1) begin
-        automap0 <= automap_next;
+        automap <= automap_next;
     end
 end
-
-// #3Dxx entrypoint is critical for timings, so we're arming 'map' signal as soon as possible
-wire automap = automap0 || (bus.m1 && bus.memreq && !mask_hooks && en_hooks && en && !rammap && bus.a[15:8] == 8'h3D);
-
 
 reg conmem;
 wire port_e3_cs = en && bus.ioreq && bus.a[7:0] == 8'hE3;
@@ -111,7 +107,7 @@ end
 
 reg [3:0] spi_cnt;
 wire spi_cnt_en = ~spi_cnt[3] | spi_cnt[2] | spi_cnt[1] | spi_cnt[0];
-assign cpuwait = ~spi_cnt[3];
+assign ext_wait_cycle2 = ~spi_cnt[3];
 always @(posedge clk28 or negedge rst_n) begin
     if (!rst_n)
         spi_cnt <= 0;

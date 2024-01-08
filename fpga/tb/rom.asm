@@ -44,13 +44,21 @@ Loop:
 
     ORG #8000 // mapped #0000
 MagicROM_Start:
+    ld sp, #8000
     ld bc, #09ff ; divmmc = 1
     ld a, 1      ; ...
     out (c), a   ; ...
-    ld bc, #03ff ; cpu freq = 7mhz
-    ld a, 3      ; ...
+    ld bc, #02ff ; machine = 128
+    ld a, 1      ; ...
     out (c), a   ; ...
+    ld bc, #03ff ; cpu freq = 14mhz
+    ld a, 4      ; ...
+    out (c), a   ; ...
+    .100 in a, (#fe)
     ld bc, #0000
+    ld de, #5000
+    ld hl, #6000
+    ldir
     push bc
     jp #f008
     ORG #F000
