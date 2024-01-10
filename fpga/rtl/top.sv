@@ -62,6 +62,7 @@ wire [2:0] ram_page128;
 wire init_done;
 wire mem_bus_valid;
 wire mem_wait;
+wire basic48_paged;
 wire sd_indication;
 
 
@@ -394,6 +395,7 @@ divmmc divmmc0(
     .rammap(port_dffd[4] | port_1ffd[0]),
     .mask_hooks(magic_map),
     .mask_nmi_hook(magic_mode),
+    .basic48_paged(basic48_paged),
 
     .page(div_page),
     .map(div_map),
@@ -481,6 +483,7 @@ mem mem0(
 
     .bus_valid(mem_bus_valid),
     .cpuwait(mem_wait),
+    .basic48_paged(basic48_paged),
 
     .machine(machine),
     .turbo(turbo),

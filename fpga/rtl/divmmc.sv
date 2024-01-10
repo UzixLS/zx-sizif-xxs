@@ -21,6 +21,7 @@ module divmmc(
     input rammap,
     input mask_hooks,
     input mask_nmi_hook,
+    input basic48_paged,
 
     output reg [3:0] page,
     output map,
@@ -30,6 +31,19 @@ module divmmc(
     output ext_wait_cycle2
 );
 
+reg rom_m1_access, rom_m1_access0;
+always @(posedge clk28 or negedge rst_n) begin
+    if (!rst_n) begin
+        rom_m1_access <= 0;
+        rom_m1_access0 <= 0;
+    end
+    else if (bus.m1) begin
+        rom_m1_access0 <= bus.a_raw[15:14] == 2'b00;
+    end
+    else begin
+        rom_m1_access <= rom_m1_access0;
+    end
+end
 
 reg automap, automap_next;
 always @(posedge clk28 or negedge rst_n) begin
@@ -45,16 +59,16 @@ always @(posedge clk28 or negedge rst_n) begin
             automap_next <= 0;
         end
         else if (
-                (bus.a == 16'h0000) || // power-on/reset/rst0/software restart
-                (bus.a == 16'h0008) || // syntax error
-                (bus.a == 16'h0038) || // im1 interrupt/rst #38
-                (bus.a == 16'h0066 && !mask_nmi_hook) || // nmi routine
-                (bus.a == 16'h04C6) || // tape save routine
-                (bus.a == 16'h0562)    // tape load and verify routine
+                (bus.a == 16'h0000)                                       || // power-on/reset/rst0/software restart
+                (bus.a == 16'h0008 && (basic48_paged || !rom_m1_access))  || // syntax error
+                (bus.a == 16'h0038 && (basic48_paged || !rom_m1_access))  || // im1 interrupt/rst #38
+                (bus.a == 16'h0066 && !mask_nmi_hook)                     || // nmi routine
+                (bus.a == 16'h04C6 && (basic48_paged || !rom_m1_access))  || // tape save routine
+                (bus.a == 16'h0562 && (basic48_paged || !rom_m1_access))     // tape load and verify routine
                 ) begin
             automap_next <= 1'b1;
         end
-        else if (bus.a[15:8] == 8'h3D) begin // tr-dos mapping area
+        else if (bus.a[15:8] == 8'h3D && (basic48_paged || !rom_m1_access)) begin // tr-dos mapping area
             automap_next <= 1'b1;
             automap <= 1'b1;
         end

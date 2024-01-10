@@ -10,6 +10,7 @@ module mem(
 
     output bus_valid,
     output cpuwait,
+    output basic48_paged,
 
     input machine_t machine,
     input turbo_t turbo,
@@ -88,6 +89,9 @@ always @* begin
         (a[15:14] == 2'b11)                            ? {1'b1, ~ram_pageext[0], ram_page128, a[13]} :
                                                          {2'b11, a[14], a[15], a[14], a[13]} ;
 end
+
+assign basic48_paged = (va_18_13[18:14] == 5'd1) ||
+                       (va_18_13[18:14] == 5'd3) ;
 
 assign vd[7:0] =
     ~n_vrd                 ? {8{1'bz}} :
