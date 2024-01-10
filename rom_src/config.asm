@@ -32,6 +32,8 @@ sd         DB 2
 ulaplus    DB 1
 dac        DB 3
 sdind      DB 1
+_reserv4   DB 0
+autoturbo  DB 0
     ENDS
 
 CFG_DEFAULT CFG_T

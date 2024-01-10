@@ -44,6 +44,7 @@ menudefault: MENU_DEF 20
 
 menuadv: MENU_DEF 22
     MENUENTRY_T str_sd_indication menu_sdind_value_cb     menu_sdind_cb
+    MENUENTRY_T str_autoturbo     menu_autoturbo_value_cb menu_autoturbo_cb
     MENUENTRY_T str_back          0                       menu_back_cb
     MENUENTRY_T 0
 .end:
@@ -130,6 +131,15 @@ menu_sdind_value_cb:
 .values_table:
     DW str_off_short.end-2
     DW str_on_short.end-2
+
+menu_autoturbo_value_cb:
+    ld ix, .values_table
+    ld a, (cfg.autoturbo)
+    jp menu_value_get
+.values_table:
+    DW str_off_short.end-2
+    DW str_on_short.end-2
+
 menu_value_get:
     sla a
     ld c, a
@@ -228,6 +238,15 @@ menu_sdind_cb:
     call menu_handle_press
     ld (cfg.sdind), a
     ld bc, #0cff
+    out (c), a
+    ret
+
+menu_autoturbo_cb:
+    ld a, (cfg.autoturbo)
+    ld c, 1
+    call menu_handle_press
+    ld (cfg.autoturbo), a
+    ld bc, #0eff
     out (c), a
     ret
 

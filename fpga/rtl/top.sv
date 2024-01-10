@@ -227,6 +227,7 @@ assign sd_indication = sd_indication_en & ~sd_cs;
 magic magic0(
     .rst_n(n_rstcpu),
     .clk28(clk28),
+    .ck35(ck35),
 
     .bus(bus),
     .d_out(magic_dout),
@@ -239,6 +240,7 @@ magic magic0(
     .magic_button(ps2_key_magic),
     .pause_button(ps2_key_pause),
     .div_paged(div_map && !div_mapram),
+    .basic48_paged(basic48_paged),
 
     .magic_mode(magic_mode),
     .magic_map(magic_map),
