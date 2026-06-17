@@ -1,9 +1,9 @@
 ## Sizif-XXS
 Smallest FPGA-based ZX Spectrum clone with real Z80.
 
-[![photo](images/revAB.small.webp)](images/revAB.webp?raw=true)
+[![photo](images/revAB.small.webp)](images/revAB.webp)
 
-[![photo](images/zero-revA.small.webp)](images/zero-revA.webp?raw=true)
+[![photo](images/zero-revA.small.webp)](images/zero-revA.webp)
 
 ### Tech specs
 * Two PCB varians: 100x24.5mm (main version) and 65x30mm (Zero version) - both are functionally identical, differs only in size
@@ -25,7 +25,7 @@ Smallest FPGA-based ZX Spectrum clone with real Z80.
 ### Magic button
 Sizif has a number of configurable parameters that you can change on the fly. To do this just hold Magic button for a second.
 
-[![photo](doc/sizif-menu.gif)](doc/sizif-menu.gif?raw=true)
+[![photo](doc/sizif-menu.gif)](doc/sizif-menu.gif)
 
 To navigate menu you can use up-down keys, to change value use enter or left-right keys. Kempston, Sinclair, Cursor and QAOP supported.
 
